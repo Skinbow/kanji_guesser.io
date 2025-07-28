@@ -8,8 +8,8 @@ from flask_socketio import SocketIO, join_room
 import base64, uuid, re
 import secrets
 
-from game import Game
-from player import Player
+from src.game import Game
+from src.player import Player
 from random import randint
 
 game_dict = {}
@@ -40,9 +40,10 @@ def create_game():
     game_dict[gamecode] = Game()
     return gamecode
 
-@app.route("/index.js")
+# TODO : Add this security to every resources
+@app.route("/script.js")
 def index():
-    return send_from_directory('static', 'index.js')
+    return send_from_directory('static', 'script.js')
 
 # @app.route("/save", methods=["POST"])
 # def save():
@@ -129,7 +130,7 @@ def join_game(gamecode):
                 resp.set_cookie("uuid", uuid_, httponly=True)
 
             # Try to add player
-            if game.add_player(uuid_):
+            if game.add_player(uuid_, nickname):
                 app.logger.info(f"User with nickname {nickname} and uuid {uuid_} connected to game {gamecode}")
                 return resp
             else:
@@ -147,9 +148,9 @@ def join_lobby(gamecode):
         return render_template("error_page.html", error_msg="Game not found!")
     
     game = game_dict[gamecode]
-
+    nickname = session.get("nickname")
     # Send back to home page if user is in invalid state
-    if session.get("nickname") == None \
+    if nickname == None \
         or request.cookies.get("uuid") == None \
         or not game.check_player(request.cookies.get("uuid")):
         return redirect("/")
@@ -157,7 +158,7 @@ def join_lobby(gamecode):
     session["gamecode"] = gamecode
 
     # Entering game lobby
-    return render_template("lobby.html")
+    return render_template("lobby.html", gamecode=gamecode, nickname=nickname)
 
 # @app.route()
 # if 'playerid' in request.cookies:

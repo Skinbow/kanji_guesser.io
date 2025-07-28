@@ -1,60 +1,35 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Dessin Kanji</title>
-  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
-  <script>
-    function setCookie(cname, cvalue, exdays) {
-      const d = new Date();
-      d.setTime(d.getTime() + (exdays*24*60*60*1000));
-      let expires = "expires="+ d.toUTCString();
-      document.cookie = cname + "=" + cvalue + ";" + expires + ";path=/";
-    }
-
-    function getCookie(cname) {
-      let name = cname + "=";
-      let decodedCookie = decodeURIComponent(document.cookie);
-      let ca = decodedCookie.split(';');
-      for(let i = 0; i < ca.length; i++) {
-        let c = ca[i];
-        while (c.charAt(0) == ' ') {
-          c = c.substring(1);
-        }
-        if (c.indexOf(name) == 0) {
-          return c.substring(name.length, c.length);
-        }
-      }
-      return "";
-    }
-  </script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kanji Guessr</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+    <script src="{{ url_for('static', filename='script.js') }}" defer></script>
+    <script src="{{ url_for('static', filename='animation.js') }}" defer></script>
+    <script src="{{ url_for('static', filename='connection.js') }}" defer></script>
 </head>
 <body>
-  <div>
-    <form name="joinForm" onsubmit="return validateForm()">
-      <label for="nickname">Nickname:</label><br>
-      <input type="text" id="nickname" name="nickname"><br>
-      <input type="submit" value="Submit">
-    </form>
-  </div>
-
-  <script>
-    let nicknameField = document.forms["joinForm"]["nickname"];
-
-    function fetchNicknameFromCookie() {
-      nicknameField.value = getCookie("nickname");
-    }
-
-    function validateForm() {
-      let nickname = nicknameField.value;
-      if (nickname == "") {
-        alert("Nickname must be filled out");
-        return false;
-      } else {
-        setCookie("nickname", nickname, 10);
-      }
-    }
-  </script>
+    <div class="top-gif-wrapper">
+        <img id="title-gif" src="static/resources/KanjiGuessr.gif" alt="KanjiGuessr">
+    </div>
+    <canvas id="matrixCanvas"></canvas>
+    <div class="container">
+        <div class="circle">
+            <div>
+                <form id="gameForm" method="GET" action="/">
+                    <input type="text" class="textbox" placeholder="Nickname" name="nickname" required>
+                    <input type="text" class="textbox" placeholder="Game code (7812)" type="number" name="gamecode">
+                    <div role="button" tabindex="0" class="button" onclick="joinGame()">
+                        JOIN
+                    </div>
+                    <div role="button" tabindex="0" class="button" onclick="createGame()">
+                        CREATE
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
 </body>
 </html>

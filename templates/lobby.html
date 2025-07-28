@@ -1,104 +1,32 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-  <meta charset="UTF-8">
-  <title>Dessin Kanji</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <!-- Feuille de style du canvas et général -->
-  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
-  <script src="https://cdn.socket.io/4.8.1/socket.io.min.js" crossorigin="anonymous"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lobby - Kanji Guessr</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+    <script src="{{ url_for('static', filename='animation.js') }}" defer></script>
 </head>
 <body>
-  <div class="container">
-    <div class="main-area">
-
-      <!-- Sidebar -->
-      <div id="sidebar">
-        <h3>Code partie : {{ gamecode }}</h3>
-        <h3>👤 Joueur : {{ nickname }}</h3>
-        <h3>👥 Participants :</h3>
-        <ul id="playerList"></ul>
-        <h3 id="roundDisplay"></h3>
-        <h3 id="timerDisplay"></h3>
-        <h3 id="top_number"></h3>
-        <ul id="scoreList"></ul>
-      </div>
-
-      <!-- Contenu principal dynamique -->
-      <div id="dynamic-zone"></div>
-
+    <div class="top-gif-wrapper">
+        <img id="title-gif" src="{{ url_for('static', filename='resources/KanjiGuessr.gif') }}" alt="KanjiGuessr">
     </div>
-  </div>
-
-  <!-- SocketIO + scripts de logique -->
-  <script>
-    const socket = io();
-
-    socket.on('you_are_drawer', (data) => {
-      const zone = document.getElementById("dynamic-zone");
-      const kanji = data.kanji;
-
-      zone.innerHTML = `
-        <div class="kanji-area">
-          <header><h1>Voici le kanji que tu dois faire deviner</h1></header>
-          <div class="kanji" style="font-size: 120px; text-align: center; margin-bottom: 20px;">
-            ${kanji.Kanji}
-          </div>
-          <button onclick="revealInfo()">Afficher les explications</button>
-          <div class="info" id="info" style="display: none;">
-            <h2>Kanji : ${kanji.Kanji}</h2>
-            <p><strong>Furigana :</strong> ${kanji.Furigana}</p>
-            <p><strong>Signification :</strong> ${kanji.Explication}</p>
-            <p><strong>Origine :</strong> ${kanji.Construction}</p>
-          </div>
+    <canvas id="matrixCanvas"></canvas>
+    <div class="container">
+        <div class="circle">
+            <div>
+                <p class="info">
+                    Gamecode : {{gamecode}}
+                </p>
+                <p class="info">
+                    Nickname : {{nickname}}
+                </p>
+                <div role="button" tabindex="0" class="button" onclick="createGame()">
+                        START
+                </div>
+            </div>
         </div>
-      `;
-    });
-
-    socket.on('someone_was_selected', (data) => {
-      const drawerId = data.selectedPlayerId;
-      const myId = {{ request.cookies['playerid'] | safe }};
-      if (drawerId !== myId) {
-        const zone = document.getElementById("dynamic-zone");
-        zone.innerHTML = `
-          <div id="canvas-wrapper">
-            <canvas id="pad"></canvas>
-          </div>
-          <div class="buttons">
-            <button id="undo">↩️ Retour</button>
-            <button id="redo">↪️ Avancer</button>
-            <button id="save">💾 Enregistrer</button>
-            <button id="clear">🧹 Effacer</button>
-          </div>
-        `;
-
-        const script = document.createElement("script");
-        script.src = "{{ url_for('static', filename='sketch.js') }}";
-        document.body.appendChild(script);
-      }
-    });
-
-    // Affichage d'explication du kanji
-    function revealInfo() {
-      const info = document.getElementById("info");
-      const btn = document.querySelector("button");
-      if (!info || !btn) return;
-      if (info.style.display === "none") {
-        info.style.display = "block";
-        btn.textContent = "Cacher les explications";
-      } else {
-        info.style.display = "none";
-        btn.textContent = "Afficher les explications";
-      }
-    }
-
-    // Résultat du modèle
-    socket.on("drawing_checked", data => {
-      const { expected, predicted, correct } = data;
-      alert(`Résultat : ${correct ? "✅ Correct" : "❌ Incorrect"}\nKanji attendu : ${expected}\nVous avez dessiné : ${predicted}`);
-    });
-  </script>
-
-  <script src="/index.js"></script>
+    </div>
 </body>
 </html>

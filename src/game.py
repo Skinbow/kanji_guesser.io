@@ -1,4 +1,4 @@
-from player import Player
+from src.player import Player
 
 MAX_PLAYERS = 16
 
