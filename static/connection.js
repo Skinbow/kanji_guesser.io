@@ -7,27 +7,28 @@ socket.on("connect", () => {
 });
 
 function getCookie(name) {
-  const value = `; ${document.cookie}`;
-  const parts = value.split(`; ${name}=`);
-  if (parts.length === 2) return parts.pop().split(';').shift();
+    const value = `; ${document.cookie}`;
+    const parts = value.split(`; ${name}=`);
+    if (parts.length === 2) return parts.pop().split(';').shift();
 }
 
-function createGame() {
-    const form = document.getElementById("gameForm");
-    const nickname = form.nickname.value;
-    if (nickname) {
-        window.location.href = `/?nickname=${encodeURIComponent(nickname)}`;
-    }
-}
+const gamecode = document.body.dataset.gamecode;
+console.log("player_list_" + gamecode);
 
-function joinGame() {
-    const form = document.getElementById("gameForm");
-    const nickname = form.nickname.value;
-    const gamecode = form.gamecode.value;
-    if (nickname) {
-        window.location.href = `/game/${encodeURIComponent(gamecode)}?nickname=${encodeURIComponent(nickname)}`;
-    }
-}
+socket.on("player_list_" + gamecode, (data) => {
+    console.log("Called");
+    const nicknameList = data.player_nicknames;
+
+    const playerListDiv = document.getElementById("player-list");
+    playerListDiv.innerHTML = ""; // reset
+
+    nicknameList.forEach((nickname) => {
+        const p = document.createElement("p");
+        console.log(nickname);
+        p.textContent = nickname;
+        playerListDiv.appendChild(p);
+    });
+});
 
 // TODO...
 

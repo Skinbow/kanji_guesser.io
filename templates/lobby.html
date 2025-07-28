@@ -7,13 +7,15 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
     <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
     <script src="{{ url_for('static', filename='animation.js') }}" defer></script>
+    <script src="{{ url_for('static', filename='connection.js') }}" defer></script>
 </head>
-<body>
+<body data-gamecode="{{ gamecode }}">
     <div class="top-gif-wrapper">
         <img id="title-gif" src="{{ url_for('static', filename='resources/KanjiGuessr.gif') }}" alt="KanjiGuessr">
     </div>
     <canvas id="matrixCanvas"></canvas>
-    <div class="container">
+    <div class="wrapper">
+        <div class="container">
         <div class="circle">
             <div>
                 <p class="info">
@@ -23,10 +25,12 @@
                     Nickname : {{nickname}}
                 </p>
                 <div role="button" tabindex="0" class="button" onclick="createGame()">
-                        START
+                    START
                 </div>
             </div>
         </div>
+    </div>
+    <div id="player-list"></div>
     </div>
 </body>
 </html>

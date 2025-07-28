@@ -205,13 +205,22 @@ def connect():
         room = "play_" + str(gamecode)
     else:
         room = "wait_" + str(gamecode)
-        
+    
+    # Make the client join the right room upon connection
+    join_room(room)
+
+    print(f"[DEBUG] {[game.connected_players[id].nickname for id in game.connected_players]}") # DEBUG
+    print("[DEBUG] player_list_" + str(gamecode))
     # Socket messaging
-    sio.emit("player_list" + str(gamecode), {
-        'playerids': game.connected_players,
-        'ingame_playerids': gamecode.ingame_players,
-        'playernicknames' : [game.connected_players[id] for id in game.connected_players],
-        'NUMBER_OF_PLAYERS': len(game.connected_players)
+    # sio.emit("player_list" + str(gamecode), {
+    #     'playerids': game.connected_players,
+    #     'ingame_playerids': gamecode.ingame_players,
+    #     'player_nicknames' : [game.connected_players[id] for id in game.connected_players],
+    #     'NUMBER_OF_PLAYERS': len(game.connected_players)
+    # }, to=room)
+
+    sio.emit("player_list_" + str(gamecode), {
+        'player_nicknames' : [game.connected_players[id].nickname for id in game.connected_players]
     }, to=room)
 
 @sio.on('disconnect')
