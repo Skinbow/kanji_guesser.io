@@ -203,18 +203,11 @@ def connect():
     join_room(str(gamecode))
 
     app.logger.debug(f"{[game.connected_players[id].nickname for id in game.connected_players]}") # DEBUG
-    app.logger.debug("player_list_" + str(gamecode))
+    app.logger.debug("player_list for" + str(gamecode))
     # Socket messaging
-    # sio.emit("player_list" + str(gamecode), {
-    #     'playerids': game.connected_players,
-    #     'ingame_playerids': gamecode.ingame_players,
-    #     'player_nicknames' : [game.connected_players[id] for id in game.connected_players],
-    #     'NUMBER_OF_PLAYERS': len(game.connected_players)
-    # }, to=room)
-
-    sio.emit("player_list_" + str(gamecode), {
+    sio.emit("player_list", {
         'player_nicknames' : [game.connected_players[id].nickname for id in game.connected_players]
-    }, to=room)
+    }, to=str(gamecode))
 
 @sio.on('disconnect')
 def disconnect():
