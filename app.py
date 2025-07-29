@@ -40,10 +40,7 @@ def create_game():
     game_dict[gamecode] = Game()
     return gamecode
 
-# TODO : Add this security to every resources
-@app.route("/script.js")
-def index():
-    return send_from_directory('static', 'script.js')
+# Static files setup is automatic
 
 # @app.route("/save", methods=["POST"])
 # def save():

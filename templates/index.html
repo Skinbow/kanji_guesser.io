@@ -11,7 +11,7 @@
 </head>
 <body>
     <div class="top-gif-wrapper">
-        <img id="title-gif" src="static/resources/KanjiGuessr.gif" alt="KanjiGuessr">
+        <img id="title-gif" src="{{ url_for('static', filename='resources/KanjiGuessr.gif') }}" alt="KanjiGuessr">
     </div>
     <canvas id="matrixCanvas"></canvas>
     
