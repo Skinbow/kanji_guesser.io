@@ -4,6 +4,7 @@ COUNT_DOWN_SECONDS = 100  # Countdown duration in seconds
 
 from flask import Flask, render_template, request, jsonify, send_from_directory, redirect, make_response, session
 from flask_socketio import SocketIO, join_room
+import logging
 
 import base64, uuid, re
 import secrets
@@ -15,6 +16,7 @@ from random import randint
 game_dict = {}
 
 app = Flask(__name__)
+app.logger.handlers[0].setFormatter(logging.Formatter("[%(levelname)s ; %(asctime)s]: %(message)s"))
 app.secret_key = secrets.token_hex()
 sio = SocketIO(app)
 
@@ -196,18 +198,12 @@ def connect():
     ## Hmm
     assert(player != None)
     player.set_socketid(request.sid)
-
-    room = ""
-    if game.in_progress and request.cookies.get("reconnect") != None:
-        room = "play_" + str(gamecode)
-    else:
-        room = "wait_" + str(gamecode)
     
     # Make the client join the right room upon connection
-    join_room(room)
+    join_room(str(gamecode))
 
-    print(f"[DEBUG] {[game.connected_players[id].nickname for id in game.connected_players]}") # DEBUG
-    print("[DEBUG] player_list_" + str(gamecode))
+    app.logger.debug(f"{[game.connected_players[id].nickname for id in game.connected_players]}") # DEBUG
+    app.logger.debug("player_list_" + str(gamecode))
     # Socket messaging
     # sio.emit("player_list" + str(gamecode), {
     #     'playerids': game.connected_players,
