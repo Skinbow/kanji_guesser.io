@@ -160,23 +160,7 @@ def join_lobby(gamecode):
     # Entering game lobby
     return render_template("lobby.html", gamecode=gamecode, nickname=nickname)
 
-# @app.route()
-# if 'playerid' in request.cookies:
-#     playerid = int(request.cookies['playerid'])
-#     game = game_dict[int(gamecode)]
-#     is_drawer = hasattr(game, 'drawer_id') and playerid == game.drawer_id
-#     kanji = get_random_kanji()
-#     print("DEBUG kanji keys:", kanji)
-#     return render_template("lobby.html",
-#                             gamecode=gamecode,
-#                             nickname=players[playerid].nickname,
-#                             is_drawer=is_drawer,
-#                             kanji=kanji if is_drawer else None)
-# else:
-#     return redirect("index.html", code=302)
-
-
-# Socket logic
+#################### Socket logic ####################
 
 @sio.on('connect')
 def connect():
