@@ -65,3 +65,19 @@ class Game:
     def check_player(self, playerid):
         return playerid in self.connected_players or \
                playerid in self.disconnected_players
+
+#################### Game logic ####################
+
+    def start_game(self, num_rounds):
+        self.in_progress = True
+
+        player_uuids = self.connected_players.keys()
+        self.round_queue = []
+
+        for _ in range(num_rounds):
+            round_players = player_uuids.copy()
+            shuffle(round_players)
+            self.round_queue.extend(round_players)
+
+        for puuid in player_uuids:
+            self.player_scores[puuid] = 0

@@ -217,11 +217,23 @@ def disconnect():
 
         app.logger.info(f"User with nickname {nickname} and uuid {player_uuid} disconnected from game {gamecode}")
 
-# # For debugging purposes
-# @sio.on('game_start_ack')
-# def game_start_ack():
-#     gamecode = players[playerids[request.sid]].gameid
-#     print(f"Game with code {gamecode} started!")
+@sio.on('start_game')
+def start_game():
+    player_uuid = request.cookies.get("uuid")
+    gamecode = session.get("gamecode")
+    if gamecode != None and player_uuid != None and game_dict[gamecode].admin == player_uuid:
+        game = game_dict[gamecode]
+        app.logger.info(f"Game with code {gamecode} started!")
+
+        game.start_game()
+
+        sio.emit('round_started', {
+            'current_round': game.current_round,
+            'total_rounds': NUMBER_OF_ROUNDS
+        }, to=str(gamecode))
+
+        next_turn(gamecode)
+
 
 # @sio.on('request_top_number')
 # def request_top_number():
