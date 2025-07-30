@@ -1,4 +1,7 @@
+from random import randint, shuffle
+
 from src.player import Player
+from src.utils import get_random_kanji
 
 MAX_PLAYERS = 16
 

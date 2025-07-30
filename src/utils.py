@@ -6,6 +6,8 @@ import time
 import csv
 import logging
 
+from random import randint
+
 # from libraries.KanjiRecognition import *
 
 #--------------------------Example---------------------------

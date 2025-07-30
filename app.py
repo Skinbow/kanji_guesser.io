@@ -4,14 +4,15 @@ COUNT_DOWN_SECONDS = 100  # Countdown duration in seconds
 
 from flask import Flask, render_template, request, jsonify, send_from_directory, redirect, make_response, session
 from flask_socketio import SocketIO, join_room
-import logging
+from random import randint
 
+import logging
 import base64, uuid, re
 import secrets
 
 from src.game import Game
 from src.player import Player
-from random import randint
+from src.utils import *
 
 game_dict = {}
 
