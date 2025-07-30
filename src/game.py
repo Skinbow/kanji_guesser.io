@@ -98,3 +98,25 @@ class Game:
 
         for puuid in player_uuids:
             self.player_scores[puuid] = 0
+
+    def next_turn(self):
+        self.current_round += 1
+
+        self.kanji_data = get_random_kanji()
+        self.current_kanji = self.kanji_data["Kanji"]
+
+        self.guess_found = False
+
+        self.selected_player = self.connected_players[self.round_queue.pop(0)]
+
+    def reset_game(self):
+        self.disconnected_players.clear()
+        self.player_scores.clear()
+        self.current_round = 1
+        self.selected_player = None
+        self.selected_character = None
+        self.guess_found = False
+
+    def get_top_scores(self, num):
+        sorted_scores = sorted(self.player_scores.items(), key=lambda item: item[1], reverse=True)
+        top_scores = sorted_scores[:num]

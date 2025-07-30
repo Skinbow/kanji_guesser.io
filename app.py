@@ -234,6 +234,57 @@ def start_game():
 
         next_turn(gamecode)
 
+@sio.on('reset_game')
+def reset_game():
+    player_uuid = request.cookies.get("uuid")
+    gamecode = session.get("gamecode")
+    if gamecode != None and player_uuid != None and game_dict[gamecode].admin == player_uuid:
+        app.logger.info(f"Game with code {gamecode} has been reset")
+        game_dict[gamecode].reset_game()
+        sio.emit('update_scores', [], to=str(gamecode))
+
+def next_turn(gamecode):
+    game = game_dict[gamecode]
+
+    if not hasattr(game, 'round_queue') or not game.round_queue:
+        app.logger.info(f"Game with gamecode {gamecode} ended")
+        top_scores = game.get_top_scores(NUMBER_OF_TOP_SCORES)
+        sio.emit('game_over', [{
+            "name": game.connected_players[pid].nickname, 
+            "score": score
+        } for pid, score in top_scores], to=str(gamecode))
+    
+        # Once the game is over, we have to reset it to initial state
+        game.reset_game()
+
+    game.next_turn()
+
+    sio.emit("you_are_drawer", {'kanji': game.kanji_data}, to=game.selected_player.socketid)
+
+    sio.emit("someone_was_selected", {
+        'selectedPlayerId': game.selected_player.publicid,
+        'selectedPlayerNickname': game.selected_player.nickname,
+        'selectedCharacter': game.kanji_data["Kanji"],
+        'characterImage': character_to_image_name.get(game.kanji_data["Kanji"], "unknown.png")
+    }, to=str(gamecode))
+
+    countdown_thread = threading.Thread(target=start_countdown, args=(gamecode, COUNT_DOWN_SECONDS, game.kanji_data["Kanji"]))
+    countdown_thread.start()
+
+def start_countdown(gamecode, duration_sec, selectedCharacter):
+    for remaining in range(duration_sec, -1, -1):
+        time_str = f"{remaining // 60:02}:{remaining % 60:02}"
+        sio.emit('timer_update', {'time': time_str}, to=str(gamecode))
+        time.sleep(1)
+
+    game = game_dict[gamecode]
+    if not game.guess_found:
+        sio.emit('show_answer', {
+            'selectedCharacter': selectedCharacter,
+            'characterImage': character_to_image_name.get(selectedCharacter, "unknown.png")
+        }, to=str(gamecode))
+
+    next_turn(gamecode)
 
 # @sio.on('request_top_number')
 # def request_top_number():
