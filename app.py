@@ -290,40 +290,30 @@ def start_countdown(gamecode, duration_sec, selectedCharacter):
 # def request_top_number():
 #     sio.emit('update_top_number', {'number': NUMBER_OF_TOP_SCORES})
 
-# @sio.on('reset_game')
-# def reset_game(gamecode):
-#     game_dict[gamecode].player_scores = {}
-#     print("Game has been reset.")
-#     sio.emit('update_scores', [], to=str(gamecode))
-#     game_dict[gamecode].current_round = 1
-
-
-# ## TODO: Modify this to display real scores
-# @sio.event
-# def save_button_clicked_generate_random_score():
-#     sid = request.sid
-#     playerid = players[sid].playerid
-#     gamecode = players[playerid].gameid
+## TODO: Modify this to display real scores
+@sio.on('submit_drawing')
+def save_button_clicked_generate_random_score():
+    player_uuid = request.cookies.get("uuid")
+    gamecode = session.get("gamecode")
     
-#     # generate 0 or 1 randomly
-#     random_score = random.randint(0, 1)
-#     print(f"Generated random score: {random_score}")
-#     if playerid not in game_dict[gamecode].player_scores:
-#         game_dict[gamecode].player_scores[playerid] = 0
-#     else:
-#         game_dict[gamecode].player_scores[playerid] += random_score
-#     # print the current player scores
-#     print(f"Current player scores: {game_dict[gamecode].player_scores}")
-    
-#     # order the player scores by score
-#     sorted_scores = sorted(game_dict[gamecode].player_scores.items(), key=lambda item: item[1], reverse=True)
-#     # keep only the top 1 scores
-#     top_scores = sorted_scores[:NUMBER_OF_TOP_SCORES]
-    
-    
-#     sio.emit('update_scores', [
-#     {"name": name, "score": score} for name, score in top_scores
-# ], to=str(gamecode))
+    if gamecode != None and player_uuid != None and game_dict[gamecode].selected_player != player_uuid:
+        # generate 0 or 1 randomly
+        random_score = random.randint(0, 1)
+        game = game_dict[gamecode]
+        app.logger.debug(f"Generated random score: {random_score}")
+        if player_uuid not in game_dict[gamecode].player_scores:
+            game.player_scores[player_uuid] = random_score
+        else:
+            game.player_scores[player_uuid] += random_score
+        # print the current player scores
+        app.logger.debug(f"Current player scores: {game_dict[gamecode].player_scores}")
+        
+        top_scores = game.get_top_scores(NUMBER_OF_TOP_SCORES)
+        
+        sio.emit('update_scores', [{
+            "name": name,
+            "score": score
+        } for name, score in top_scores], to=str(gamecode))
 
 if __name__ == "__main__":
     sio.run(app, debug=True, host="127.0.0.1", port=3000)
