@@ -44,12 +44,6 @@ from random import randint
 SAVE_DIR = Path("drawings")
 SAVE_DIR.mkdir(exist_ok=True)
 
-def genid(dict):
-    r_id = random.randint(100,999)
-    while r_id in dict:
-        r_id = random.randint(100,999)
-    return r_id
-
 # TODO: add the complete list
 characterList = ['金', '木', '水', '火', '土']
 character_to_image_name = {
