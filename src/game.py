@@ -11,10 +11,12 @@ class Game:
         self.connected_players = {}
         self.ingame_players = {}
         self.admin = None
-        self.in_progress = False
         self.disconnected_players = {}
         self.used_publicids = []
         self.available_publicids = list(range(MAX_PLAYERS))
+        self.in_progress = False
+        self.rounds_num = 2
+
         # Game logic
         self.player_scores = {}
         self.selected_player = None
