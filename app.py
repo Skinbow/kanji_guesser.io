@@ -207,12 +207,13 @@ def connect():
     app.logger.debug("player_list for" + str(gamecode))
     # Socket messaging
     sio.emit("player_list", {
-        'player_nicknames' : [game.connected_players[id].nickname for id in game.connected_players]
+        'player_nicknames' : [p.nickname for p in game.connected_players.values()],
+        'player_ids': [p.publicid for p in game.connected_players.values()]
     }, to=str(gamecode))
 
 @sio.on('disconnect')
 def disconnect():
-    player_uuid = request.cookies.get("uuid")    
+    player_uuid = request.cookies.get("uuid")
     gamecode = session.get("gamecode")
 
     if gamecode != None and player_uuid != None:
