@@ -13,7 +13,8 @@ class Game:
         self.admin = None
         self.in_progress = False
         self.disconnected_players = {}
-        
+        self.used_publicids = []
+        self.available_publicids = list(range(MAX_PLAYERS))
         # Game logic
         self.player_scores = {}
         self.selected_player = None
@@ -28,20 +29,24 @@ class Game:
         if len(self.connected_players) >= MAX_PLAYERS:
             return False
         else:
+            publicid = self.get_new_publicid()
             if self.admin == None:
                 self.admin = player_uuid
-            self.connected_players[player_uuid] = Player(player_uuid, nickname)
+            player = Player(player_uuid, nickname)
+            player.set_publicid(publicid)
+            self.connected_players[player_uuid] = player
             return True
     
     def remove_player(self, player_uuid):
         if player_uuid not in self.connected_players:
             return False
 
-        self.connected_players.pop(player_uuid)
+        player = self.connected_players.pop(player_uuid)
+        self.free_publicid(player.publicid)
         # Select new admin if admin leaves
         if self.admin == player_uuid:
             if len(self.connected_players) != 0:
-                self.admin = self.connected_players[0]
+                self.admin = self.connected_players.keys[0]
         if player_uuid in self.player_scores:
             self.player_scores.pop(player_uuid)
         return True
@@ -50,6 +55,7 @@ class Game:
         if player_uuid in self.connected_players:
             player = self.connected_players.pop(player_uuid)
             self.disconnected_players[player_uuid] = player
+            self.free_publicid(player.publicid)
             return True
         else:
             return False
@@ -57,6 +63,8 @@ class Game:
     def reconnect_player(self, player_uuid):
         if player_uuid in self.disconnected_players:
             player = self.disconnected_players.pop(player_uuid)
+            publicid = self.get_new_publicid()
+            player.set_publicid(publicid)
             self.connected_players[player_uuid] = player
             return True
         else:
@@ -65,6 +73,15 @@ class Game:
     def check_player(self, playerid):
         return playerid in self.connected_players or \
                playerid in self.disconnected_players
+    
+    def get_new_publicid(self):
+        publicid = self.available_publicids.pop()
+        self.used_publicids.append(publicid)
+        return publicid
+
+    def free_publicid(self, publicid):
+        self.used_publicids.remove(publicid)
+        self.available_publicids.append(publicid)
 
 #################### Game logic ####################
 

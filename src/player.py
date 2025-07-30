@@ -6,3 +6,6 @@ class Player:
     
     def set_socketid(self, socketid):
         self.socketid = socketid
+
+    def set_publicid(self, publicid):
+        self.publicid = publicid
