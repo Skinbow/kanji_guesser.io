@@ -31,5 +31,19 @@ socket.on("player_list_" + gamecode, (data) => {
 });
 
 // TODO...
+// Treat the following messages:
+// "player_list"
+// "you_are_drawer"
+// "someone_was_selected"
+// 'timer_update'???
+// 'show_answer'
+// 'round_started'
+// 'update_scores'
+// 'game_over'
+
+// Send the following:
+// 'start_game'
+// 'reset_game'
+// 'submit_drawing'
 
 // -----------------------------------------
