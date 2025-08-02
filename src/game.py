@@ -94,7 +94,7 @@ class Game:
         self.round_queue = []
 
         for _ in range(num_rounds):
-            round_players = player_uuids.copy()
+            round_players = list(player_uuids) # copy
             shuffle(round_players)
             self.round_queue.extend(round_players)
 
@@ -122,3 +122,4 @@ class Game:
     def get_top_scores(self, num):
         sorted_scores = sorted(self.player_scores.items(), key=lambda item: item[1], reverse=True)
         top_scores = sorted_scores[:num]
+        return top_scores
