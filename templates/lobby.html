@@ -8,29 +8,40 @@
     <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
     <script src="{{ url_for('static', filename='animation.js') }}" defer></script>
     <script src="{{ url_for('static', filename='connection.js') }}" defer></script>
+
+    <script>
+        const clearIcon = "{{ url_for('static', filename='resources/clear.png') }}";
+        const undoIcon = "{{ url_for('static', filename='resources/undo.png') }}";
+        const redoIcon = "{{ url_for('static', filename='resources/redo.png') }}";
+    </script>
 </head>
 <body data-gamecode="{{ gamecode }}">
-    <div class="top-gif-wrapper">
+    <div class="top-gif-wrapper" id="title-container">
         <img id="title-gif" src="{{ url_for('static', filename='resources/KanjiGuessr.gif') }}" alt="KanjiGuessr">
     </div>
     <canvas id="matrixCanvas"></canvas>
+    <div id="rounds"></div>
     <div class="wrapper">
         <div class="container">
-        <div class="circle">
-            <div>
-                <p class="info">
-                    Gamecode : {{gamecode}}
-                </p>
-                <p class="info">
-                    Nickname : {{nickname}}
-                </p>
-                <div role="button" tabindex="0" class="button" onclick="createGame()">
-                    START
+            <div class="circle" id="menu">
+                <div>
+                    <p class="info">
+                        Gamecode : {{gamecode}}
+                    </p>
+                    <p class="info">
+                        Nickname : {{nickname}}
+                    </p>
+                    <div role="button" tabindex="0" class="button" onclick="startGame()">
+                        START
+                    </div>
                 </div>
             </div>
         </div>
+        <div id="player-list"></div>
     </div>
-    <div id="player-list"></div>
-    </div>
+    <script src="{{ url_for('static', filename='drawing.js') }}"></script>
+    <script src="{{ url_for('static', filename='clues.js') }}"></script>
 </body>
 </html>
+
+

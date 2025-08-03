@@ -14,14 +14,40 @@ from src.game import Game
 from src.player import Player
 from src.utils import *
 
+from libraries.KanjiRecognition import *
+
+# TODO : Add an event which handle the end of a round and give the reason (timer ended or everyone guessed)
+
 game_dict = {}
 
 app = Flask(__name__)
-app.logger.handlers[0].setFormatter(logging.Formatter("[%(levelname)s ; %(asctime)s]: %(message)s"))
+app.logger.handlers[0].setFormatter(logging.Formatter("[%(levelname)s | %(asctime)s]: %(message)s"))
 app.secret_key = secrets.token_hex()
+app.logger.setLevel("DEBUG")
+
 sio = SocketIO(app)
 
 sio.init_app(app)
+
+#------------------------------------------------------------
+app.logger.debug("Loading the model...")
+kanji_df = get_kanji_dataframe("static/models/csv/marugoto_a1_kanji_furigana.csv")
+device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
+model = load_model("static/models/Model_250.pth", device)
+
+# Transform for the drawings on the website and the references images
+transform = transforms.Compose([
+    transforms.Resize((64, 64)),
+    transforms.Grayscale(num_output_channels=1),
+    transforms.ToTensor(),
+    transforms.Lambda(lambda x: 1.0 - x),
+    transforms.Lambda(lambda x: (x > 0.2).float()),
+    transforms.Normalize(mean=[0.5], std=[0.5])
+])
+
+labels, reference_vectors = get_reference_vectors(model, device, "static/models/references/", transform)
+app.logger.debug("Loading is done.")
+#------------------------------------------------------------
 
 # Home page asks for nickname and sends user to game page
 @app.route("/")
@@ -42,51 +68,6 @@ def create_game():
         gamecode = hex(randint(0x100000, 0xffffff))[2:]
     game_dict[gamecode] = Game()
     return gamecode
-
-# Static files setup is automatic
-
-# @app.route("/save", methods=["POST"])
-# def save():
-#     data_url = request.json.get("png")
-#     match = re.match(r"^data:image/\w+;base64,(.+)$", data_url)
-#     if not match:
-#         return jsonify({"error": "format"}), 400
-#     raw = base64.b64decode(match.group(1))
-#     fname = SAVE_DIR / f"{uuid.uuid4()}.png"
-#     fname.write_bytes(raw)
-
-#     embedding = get_embedding(model, load_image(fname, transform, device))
-#     predicted_labels = get_N_first_labels(embedding, labels, reference_vectors, N=15)
-#     print(f"Predicted label: {predicted_labels}")
-
-#     playerid = int(request.cookies.get("playerid", -1))
-#     if playerid == -1 or playerid not in players:
-#         return jsonify({"error": "invalid_player"}), 400
-
-#     gamecode = players[playerid].gameid
-#     game = game_dict[gamecode]
-#     expected_kanji = getattr(game, 'current_kanji', None)
-#     correct = expected_kanji in predicted_labels
-
-#     print(f"Expected: {expected_kanji}, Correct: {correct}")
-
-#     sid = players[playerid].socketid
-#     sio.emit("drawing_checked", {
-#         "expected": expected_kanji,
-#         "predicted": predicted_labels,
-#         "correct": correct
-#     }, to=sid)
-
-#     if correct and not getattr(game, "guess_found", False):
-#         game.guess_found = True
-#         game.player_scores[playerid] = game.player_scores.get(playerid, 0) + 1
-
-#         sio.emit("player_guessed", {
-#             "playerNickname": players[playerid].nickname,
-#             "kanji": expected_kanji
-#         }, to=str(gamecode))
-
-#     return jsonify({"ok": True, "label": predicted_labels})
 
 # Join game
 @app.route("/game/<gamecode>")
@@ -225,7 +206,7 @@ def start_game():
         game = game_dict[gamecode]
         app.logger.info(f"Game with code {gamecode} started!")
 
-        game.start_game()
+        game.start_game(NUMBER_OF_ROUNDS)
 
         sio.emit('round_started', {
             'current_round': game.current_round,
@@ -259,7 +240,7 @@ def next_turn(gamecode):
 
     game.next_turn()
 
-    sio.emit("you_are_drawer", {'kanji': game.kanji_data}, to=game.selected_player.socketid)
+    sio.emit("you_are_clue_giver", {'kanji': game.kanji_data}, to=game.selected_player.socketid)
 
     sio.emit("someone_was_selected", {
         'selectedPlayerId': game.selected_player.publicid,
@@ -290,9 +271,15 @@ def start_countdown(gamecode, duration_sec, selectedCharacter):
 # def request_top_number():
 #     sio.emit('update_top_number', {'number': NUMBER_OF_TOP_SCORES})
 
-## TODO: Modify this to display real scores
-@sio.on('submit_drawing')
-def save_button_clicked_generate_random_score():
+## TODO: Update this method according to the docstring
+@sio.on('submit_choice')
+def choice_submitted(data):
+    """
+     This function check if the kanji guess by the client is right one
+     If it's the case, the player's score is update by a certain amount f(t, n)
+     f(t, n) = the score obtain by the player's guess, where
+     t = the time it took to guess, n = the number of players which have already guessed
+    """
     player_uuid = request.cookies.get("uuid")
     gamecode = session.get("gamecode")
     
@@ -314,6 +301,21 @@ def save_button_clicked_generate_random_score():
             "name": name,
             "score": score
         } for name, score in top_scores], to=str(gamecode))
+
+@sio.on('get_characters')
+def getCharacters(data):
+    # This function will edit the 10 cells below the canva with the 10 most probable kanjis from the drawing
+    image_b64 = data["image"]
+    image_b64 = image_b64.split(",")[1]
+    image = base64.b64decode(image_b64)
+    filename = "image.png"
+    Path(filename).write_bytes(image)
+
+    embedding = get_embedding(model, load_image(filename, transform, device))
+    predicted_labels = get_N_first_labels(embedding, labels, reference_vectors, N=10)
+
+    sio.emit('characters_result', {'characters': predicted_labels}, to=request.sid)
+
 
 if __name__ == "__main__":
     sio.run(app, debug=True, host="127.0.0.1", port=3000)

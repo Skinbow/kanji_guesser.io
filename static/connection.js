@@ -12,17 +12,18 @@ function getCookie(name) {
     if (parts.length === 2) return parts.pop().split(';').shift();
 }
 
-const gamecode = document.body.dataset.gamecode;
-console.log("player_list_" + gamecode);
+const nicknames = [];
 
-socket.on("player_list_" + gamecode, (data) => {
-    console.log("Called");
-    const nicknameList = data.player_nicknames;
+// Load the players nicknames on the bottom grid
+socket.on("player_list", (data) => {
+    console.log("player_list");
+    nicknames.length = 0; // reset
+    nicknames.push(...data.player_nicknames);
 
     const playerListDiv = document.getElementById("player-list");
     playerListDiv.innerHTML = ""; // reset
 
-    nicknameList.forEach((nickname) => {
+    nicknames.forEach((nickname) => {
         const p = document.createElement("p");
         console.log(nickname);
         p.textContent = nickname;
@@ -30,9 +31,128 @@ socket.on("player_list_" + gamecode, (data) => {
     });
 });
 
+// Add characters to the cells
+socket.on("characters_result", (data) => {
+    console.log("characters_result");
+    const chars = data.characters;
+    const i = 0;
+    for (let i = 0; i < 10; i++) {
+        const char = chars[i];
+        console.log(char);
+        const cell = document.getElementById("cell-" + (i+1));
+        cell.innerText = char;
+    }
+});
+
+// Tell the client it is the clue giver
+socket.on("you_are_clue_giver", (data) => {
+    console.log("you_are_clue_giver");
+    const kanji = data.kanji;
+    
+    toggleTitle();
+    switchElement("menu", clues);
+    
+    const kanjiName = document.getElementById("kanji-name");
+    const furigana = document.getElementById("furigana");
+    const explanation = document.getElementById("explanation");
+    const construction = document.getElementById("construction");
+    const example = document.getElementById("example");
+
+    kanjiName.innerHTML = "<b>Kanji : </b>" + kanji.Kanji;
+    furigana.innerHTML = "<b>Furigana : </b>" + kanji.Furigana;
+    explanation.innerHTML = "<b>Explanation : </b>" + kanji.Explication;
+    construction.innerHTML = "<b>Construction : </b>" + kanji.Construction;
+    if (kanji.Exemples != null) {
+        example.innerHTML = "<b>Examples : </b>" + kanji.Exemples;
+    }
+});
+
+// Tell the client it is the guesser (should draw the kanji based on the clues)
+// And who is the clue giver
+socket.on("someone_was_selected", (data) => {
+    console.log("someone_was_selected");
+    const playerID = data.selectedPlayerId; // Maybe I should keep a map between PID and Nickname ?
+    const playerNickname = data.selectedPlayerNickname;
+    toggleTitle();
+
+    switchElement("menu", drawingZone);
+
+    const playerListDiv = document.getElementById("player-list");
+    const paragraphs = playerListDiv.querySelectorAll("p");
+    let i = 0;
+    paragraphs.forEach((p) => {
+        if (p.innerText == playerNickname) {
+            p.innerHTML = "<b>" + p.innerText + "(Clue Giver)</b>";
+        }
+        else {
+            p.innerText = nicknames[i];
+            console.log(nicknames, i);
+        }
+        i = i + 1;
+    });
+});
+
+// Show the right answer in this round
+socket.on("show_answer", (data) => {
+    console.log("show_answer");
+    const kanji = data.selectedCharacter;
+    const kanjiImage = data.characterImage;
+
+    console.log(kanji);
+    console.log(kanjiImage);
+    // TODO : Show the kanji (if the image is the way it is draw, its useful, otherwise we don't need it)
+
+});
+
+// Get the informations of the current round and the total number of rounds
+socket.on("round_started", (data) => {
+    console.log("round_started");
+    const currentRound = data.current_round;
+    const totalRound = data.total_rounds;
+
+    console.log(currentRound);
+    console.log(totalRound);
+    // TODO : Show the currentRound over totalRound on the screen
+    
+    const roundsInfo = document.getElementById("rounds");
+    roundsInfo.innerText = `Rounds : ${currentRound}/${totalRound}`
+});
+
+// Update the players scores
+socket.on("update_scores", (data) => {
+    console.log("update_scores");
+    const players = data;
+    console.log(players);
+    // TODO : For each player, update its score
+
+    const playerListDiv = document.getElementById("player-list");
+    const paragraphs = playerListDiv.querySelectorAll("p");
+
+    // TODO : Work on it when updated (for now it doesn't work properly)
+    let i = 0;
+    paragraphs.forEach((p) => {
+        const name = players[i].name;
+        const score = players[i].score;
+        p.innerText = `${name}\n${score}`;
+        i = i + 1;
+    });
+});
+
+// Update the players scores
+socket.on("game_over", (data) => {
+    console.log("game_over");
+    const name = data.name;
+    const score = data.score;
+
+    console.log(name);
+    console.log(score);
+    // TODO : For each player, update its score
+    
+});
+
 // TODO...
 // Treat the following messages:
-// "player_list"
+// "player_list" : Add ids
 // "you_are_drawer"
 // "someone_was_selected"
 // 'timer_update'???
