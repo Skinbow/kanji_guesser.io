@@ -253,17 +253,18 @@ def next_turn(gamecode):
     countdown_thread.start()
 
 def start_countdown(gamecode, duration_sec, selectedCharacter):
-    for remaining in range(duration_sec, -1, -1):
-        time_str = f"{remaining // 60:02}:{remaining % 60:02}"
-        sio.emit('timer_update', {'time': time_str}, to=str(gamecode))
-        time.sleep(1)
+    time.sleep(10)
+    app.logger.debug(f"Countdown on game with gamecode {gamecode} finished!")
+    # for remaining in range(duration_sec, -1, -1):
+    #     time_str = f"{remaining // 60:02}:{remaining % 60:02}"
+    #     sio.emit('timer_update', {'time': time_str}, to=str(gamecode))
+    #     time.sleep(1)
 
-    game = game_dict[gamecode]
-    if not game.guess_found:
-        sio.emit('show_answer', {
-            'selectedCharacter': selectedCharacter,
-            'characterImage': character_to_image_name.get(selectedCharacter, "unknown.png")
-        }, to=str(gamecode))
+    # game = game_dict[gamecode]
+    sio.emit('show_answer', {
+        'selectedCharacter': selectedCharacter,
+        'characterImage': character_to_image_name.get(selectedCharacter, "unknown.png")
+    }, to=str(gamecode))
 
     next_turn(gamecode)
 
