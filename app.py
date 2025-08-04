@@ -284,17 +284,18 @@ def choice_submitted(data):
     gamecode = session.get("gamecode")
     
     if gamecode != None and player_uuid != None and game_dict[gamecode].selected_player != player_uuid:
-        # generate 0 or 1 randomly
-        random_score = random.randint(0, 1)
         game = game_dict[gamecode]
-        app.logger.debug(f"Generated random score: {random_score}")
-        if player_uuid not in game_dict[gamecode].player_scores:
-            game.player_scores[player_uuid] = random_score
-        else:
-            game.player_scores[player_uuid] += random_score
-        # print the current player scores
-        app.logger.debug(f"Current player scores: {game_dict[gamecode].player_scores}")
-        
+        # TODO: Need to have a way to associate returned kanji with the kanji_data entry
+        # (right now they aren't always the same because of the hiragana transcription) 
+        if "choice" in data and data["choice"] == game.kanji_data["Kanji"]:
+            app.logger.debug(f"Correct guess from {player_uuid} in game {gamecode}")
+            if player_uuid not in game_dict[gamecode].player_scores:
+                game.player_scores[player_uuid] = 1
+            else:
+                game.player_scores[player_uuid] += 1
+            # print the current player scores
+            app.logger.debug(f"Current player scores: {game.get_scores()}")
+            
             scores = game.get_scores()
             
             sio.emit('update_scores', [{
