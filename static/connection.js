@@ -35,7 +35,6 @@ socket.on("player_list", (data) => {
 socket.on("characters_result", (data) => {
     console.log("characters_result");
     const chars = data.characters;
-    const i = 0;
     for (let i = 0; i < 10; i++) {
         const char = chars[i];
         console.log(char);
@@ -71,7 +70,7 @@ socket.on("you_are_clue_giver", (data) => {
 // And who is the clue giver
 socket.on("someone_was_selected", (data) => {
     console.log("someone_was_selected");
-    const playerID = data.selectedPlayerId; // Maybe I should keep a map between PID and Nickname ?
+    //const playerID = data.selectedPlayerId; // Maybe I should keep a map between PID and Nickname ?
     const playerNickname = data.selectedPlayerNickname;
     toggleTitle();
 
@@ -82,7 +81,7 @@ socket.on("someone_was_selected", (data) => {
     let i = 0;
     paragraphs.forEach((p) => {
         if (p.innerText == playerNickname) {
-            p.innerHTML = "<b>" + p.innerText + "(Clue Giver)</b>";
+            p.innerHTML = "<b>" + p.innerText + " (Clue Giver)</b>";
         }
         else {
             p.innerText = nicknames[i];
@@ -104,7 +103,7 @@ socket.on("show_answer", (data) => {
 
 });
 
-// Get the informations of the current round and the total number of rounds
+// Get the information of the current round and the total number of rounds
 socket.on("round_started", (data) => {
     console.log("round_started");
     const currentRound = data.current_round;
