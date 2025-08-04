@@ -229,11 +229,11 @@ def next_turn(gamecode):
 
     if not hasattr(game, 'round_queue') or not game.round_queue:
         app.logger.info(f"Game with gamecode {gamecode} ended")
-        top_scores = game.get_top_scores(NUMBER_OF_TOP_SCORES)
+        scores = game.get_scores()
         sio.emit('game_over', [{
             "name": game.connected_players[pid].nickname, 
             "score": score
-        } for pid, score in top_scores], to=str(gamecode))
+        } for pid, score in scores.items()], to=str(gamecode))
     
         # Once the game is over, we have to reset it to initial state
         game.reset_game()
@@ -295,12 +295,12 @@ def choice_submitted(data):
         # print the current player scores
         app.logger.debug(f"Current player scores: {game_dict[gamecode].player_scores}")
         
-        top_scores = game.get_top_scores(NUMBER_OF_TOP_SCORES)
-        
-        sio.emit('update_scores', [{
-            "name": name,
-            "score": score
-        } for name, score in top_scores], to=str(gamecode))
+            scores = game.get_scores()
+            
+            sio.emit('update_scores', [{
+                "name": game.connected_players[pid].nickname,
+                "score": score
+            } for pid, score in scores.items()], to=str(gamecode))
 
 @sio.on('get_characters')
 def getCharacters(data):

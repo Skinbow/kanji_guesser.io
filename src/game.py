@@ -37,6 +37,7 @@ class Game:
             player = Player(player_uuid, nickname)
             player.set_publicid(publicid)
             self.connected_players[player_uuid] = player
+            self.player_scores[player_uuid] = 0
             return True
     
     def remove_player(self, player_uuid):
@@ -119,7 +120,8 @@ class Game:
         self.selected_character = None
         self.guess_found = False
 
-    def get_top_scores(self, num):
-        sorted_scores = sorted(self.player_scores.items(), key=lambda item: item[1], reverse=True)
-        top_scores = sorted_scores[:num]
-        return top_scores
+    def get_scores(self):
+        return {pid: score for pid, score in self.player_scores.items() if pid in self.connected_players}
+        # sorted_scores = sorted(self.player_scores.items(), key=lambda item: item[1], reverse=True)
+        # top_scores = sorted_scores[:num]
+        #return top_scores
