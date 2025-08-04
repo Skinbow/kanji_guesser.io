@@ -227,6 +227,7 @@ def reset_game():
 def next_turn(gamecode):
     game = game_dict[gamecode]
 
+    # Game over
     if not game.next_turn():
         app.logger.info(f"Game with gamecode {gamecode} ended")
         scores = game.get_scores()
@@ -237,20 +238,20 @@ def next_turn(gamecode):
     
         # Once the game is over, we have to reset it to initial state
         game.reset_game()
+    else:
+        sio.emit("you_are_clue_giver", {'kanji': game.kanji_data}, to=game.selected_player.socketid)
 
-    sio.emit("you_are_clue_giver", {'kanji': game.kanji_data}, to=game.selected_player.socketid)
+        sio.emit("someone_was_selected", {
+            'selectedPlayerId': game.selected_player.publicid,
+            'selectedPlayerNickname': game.selected_player.nickname,
+            'selectedCharacter': game.kanji_data["Kanji"],
+            'characterImage': character_to_image_name.get(game.kanji_data["Kanji"], "unknown.png")
+        }, to=str(gamecode))
 
-    sio.emit("someone_was_selected", {
-        'selectedPlayerId': game.selected_player.publicid,
-        'selectedPlayerNickname': game.selected_player.nickname,
-        'selectedCharacter': game.kanji_data["Kanji"],
-        'characterImage': character_to_image_name.get(game.kanji_data["Kanji"], "unknown.png")
-    }, to=str(gamecode))
+        app.logger.info(f"Game with gamecode {gamecode} next turn")
 
-    app.logger.info(f"Game with gamecode {gamecode} next turn")
-
-    countdown_thread = threading.Thread(target=start_countdown, args=(gamecode, COUNT_DOWN_SECONDS, game.kanji_data["Kanji"]))
-    countdown_thread.start()
+        countdown_thread = threading.Thread(target=start_countdown, args=(gamecode, COUNT_DOWN_SECONDS, game.kanji_data["Kanji"]))
+        countdown_thread.start()
 
 def start_countdown(gamecode, duration_sec, selectedCharacter):
     time.sleep(10)
