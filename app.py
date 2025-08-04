@@ -316,6 +316,9 @@ def getCharacters(data):
     embedding = get_embedding(model, load_image(filename, transform, device))
     predicted_labels = get_N_first_labels(embedding, labels, reference_vectors, N=10)
 
+    # Remove temporary file
+    Path(filename).unlink()
+
     sio.emit('characters_result', {'characters': predicted_labels}, to=request.sid)
 
 
