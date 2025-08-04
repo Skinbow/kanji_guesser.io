@@ -1,3 +1,7 @@
 Flask
 Flask-SocketIO
 pathlib
+pandas
+torch
+torchvision
+timm
