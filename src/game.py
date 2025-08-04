@@ -129,6 +129,7 @@ class Game:
         self.selected_player = None
         self.selected_character = None
         self.guess_found = False
+        self.in_progress = False
 
     def get_scores(self):
         return {pid: score for pid, score in self.player_scores.items() if pid in self.connected_players}
