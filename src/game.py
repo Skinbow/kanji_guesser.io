@@ -18,6 +18,7 @@ class Game:
         self.rounds_num = 2
 
         # Game logic
+        self.round_queue = []
         self.player_scores = {}
         self.selected_player = None
         self.selected_character = None
@@ -91,16 +92,16 @@ class Game:
     def start_game(self, num_rounds):
         self.in_progress = True
 
-        player_uuids = self.connected_players.keys()
-        self.round_queue = []
+        self.set_round_queue()
 
-        for _ in range(num_rounds):
-            round_players = list(player_uuids) # copy
-            shuffle(round_players)
-            self.round_queue.extend(round_players)
-
-        for puuid in player_uuids:
+        for puuid in self.connected_players.keys():
             self.player_scores[puuid] = 0
+
+    # Sets selected players order
+    def set_round_queue(self):
+        player_uuids = list(self.connected_players.keys())
+        shuffle(player_uuids)
+        self.round_queue = player_uuids
 
     def next_turn(self):
         self.current_round += 1
@@ -110,7 +111,16 @@ class Game:
 
         self.guess_found = False
 
-        self.selected_player = self.connected_players[self.round_queue.pop(0)]
+        if len(self.round_queue) == 0:
+            return False
+        else:
+            for puuid in self.round_queue:
+                if puuid in self.connected_players:
+                    self.round_queue.remove(puuid)
+                    self.selected_player = self.connected_players[puuid]
+                    return True
+            # None of the players in queue are connected
+            return False
 
     def reset_game(self):
         self.disconnected_players.clear()
