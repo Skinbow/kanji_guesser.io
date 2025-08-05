@@ -146,7 +146,7 @@ def join_lobby(gamecode):
     # Send back to home page if user is in invalid state
     if nickname == None \
         or request.cookies.get("uuid") == None \
-        or not game.check_player(request.cookies.get("uuid")):
+        or not game.player_in_game(request.cookies.get("uuid")):
         return redirect("/")
     
     session["gamecode"] = gamecode
@@ -169,13 +169,11 @@ def connect():
     game = game_dict[gamecode]
 
     if player_uuid == None \
-    or not game_dict[gamecode].check_player(player_uuid):
+    or not game_dict[gamecode].player_in_game(player_uuid):
         # User not in game
         return render_template("error_page.html", error_msg="You have done something wrong!")
 
     player = game.connected_players.get(player_uuid)
-    ## Hmm
-    assert(player != None)
     player.set_socketid(request.sid)
     
     # Make the client join the right room upon connection

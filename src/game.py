@@ -74,9 +74,8 @@ class Game:
         else:
             return False
     
-    def check_player(self, playerid):
-        return playerid in self.connected_players or \
-               playerid in self.disconnected_players
+    def player_in_game(self, playerid):
+        return playerid in self.connected_players
     
     def get_new_publicid(self):
         publicid = self.available_publicids.pop()
