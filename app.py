@@ -89,7 +89,7 @@ def join_game(gamecode):
     if "uuid" in request.cookies and request.cookies["uuid"] in game.disconnected_players:
         uuid_ = request.cookies["uuid"]
         if game.reconnect_player(uuid_):
-            player = game.disconnected_players[uuid_]
+            player = game.connected_players[uuid_]
             # Get old nickname
             nickname = player.nickname
             session["nickname"] = nickname
