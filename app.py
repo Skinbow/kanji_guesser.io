@@ -2,10 +2,12 @@ NUMBER_OF_TOP_SCORES = 1  # Number of top scores to keep
 NUMBER_OF_ROUNDS = 2 # Number of rounds in the game
 COUNT_DOWN_SECONDS = 100  # Countdown duration in seconds
 
-from flask import Flask, render_template, request, jsonify, send_from_directory, redirect, make_response, session
-from flask_socketio import SocketIO, join_room
+from flask import Flask, app, render_template, request, jsonify, send_from_directory, redirect, make_response, session
+from asgiref.wsgi import WsgiToAsgi
 from random import randint
 
+import asyncio
+import socketio
 import logging
 import base64, uuid, re
 import secrets
@@ -20,38 +22,44 @@ from libraries.KanjiRecognition import *
 
 game_dict = {}
 
+
 app = Flask(__name__)
+app.config.from_pyfile('config.py')
 app.logger.handlers[0].setFormatter(logging.Formatter("[%(levelname)s | %(asctime)s]: %(message)s"))
 app.secret_key = secrets.token_hex()
 app.logger.setLevel("DEBUG")
 
-sio = SocketIO(app)
+asgi_app = WsgiToAsgi(app)
 
-sio.init_app(app)
+sio = socketio.AsyncServer(async_mode="asgi")
+tapp = socketio.ASGIApp(sio, asgi_app)
+
 
 #------------------------------------------------------------
-app.logger.debug("Loading the model...")
-kanji_df = get_kanji_dataframe("static/models/csv/marugoto_a1_kanji_furigana.csv")
-device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
-model = load_model("static/models/Model_250.pth", device)
+def init():
+    global kanji_df, labels, reference_vectors, model, transform, device
+    app.logger.debug("Loading the model...")
+    kanji_df = get_kanji_dataframe("static/models/csv/marugoto_a1_kanji_furigana.csv")
+    device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
+    model = load_model("static/models/Model_250.pth", device)
 
-# Transform for the drawings on the website and the references images
-transform = transforms.Compose([
-    transforms.Resize((64, 64)),
-    transforms.Grayscale(num_output_channels=1),
-    transforms.ToTensor(),
-    transforms.Lambda(lambda x: 1.0 - x),
-    transforms.Lambda(lambda x: (x > 0.2).float()),
-    transforms.Normalize(mean=[0.5], std=[0.5])
-])
+    # Transform for the drawings on the website and the references images
+    transform = transforms.Compose([
+        transforms.Resize((64, 64)),
+        transforms.Grayscale(num_output_channels=1),
+        transforms.ToTensor(),
+        transforms.Lambda(lambda x: 1.0 - x),
+        transforms.Lambda(lambda x: (x > 0.2).float()),
+        transforms.Normalize(mean=[0.5], std=[0.5])
+    ])
 
-labels, reference_vectors = get_reference_vectors(model, device, "static/models/references/", transform)
-app.logger.debug("Loading is done.")
+    labels, reference_vectors = get_reference_vectors(model, device, "static/models/references/", transform)
+    app.logger.debug("Loading is done.")
 #------------------------------------------------------------
 
 # Home page asks for nickname and sends user to game page
 @app.route("/")
-def home():
+async def home():
     nickname = request.args.get("nickname")
     if nickname == None:
         nickname_suggestion = ""
@@ -78,7 +86,7 @@ def create_game():
 
 # Join game
 @app.route("/game/<gamecode>")
-def join_game(gamecode):
+async def join_game(gamecode):
     if gamecode not in game_dict:
         # Game not found page
         return render_template("error_page.html", error_msg="Game not found!")
@@ -136,7 +144,7 @@ def join_game(gamecode):
             return render_template("index.html", nickname_suggestion=nickname_suggestion)
 
 @app.route("/game/<gamecode>/lobby")
-def join_lobby(gamecode):
+async def join_lobby(gamecode):
     if gamecode not in game_dict:
         # Game not found page
         return render_template("error_page.html", error_msg="Game not found!")
@@ -172,13 +180,13 @@ def socket_request_is_valid(request):
     
     return True
 
-@sio.on('connect')
-def connect():
+@sio.event
+async def connect(sid, environ, auth):
     if not socket_request_is_valid(request):
         disconnect()
         return
 
-    player_uuid = request.cookies.get("uuid")
+    player_uuid = environ.cookies.get("uuid")
     gamecode = session.get("gamecode")
     game = game_dict[gamecode]
 
@@ -197,8 +205,8 @@ def connect():
         'player_ids': [p.publicid for p in game.connected_players.values()]
     }, to=str(gamecode))
 
-@sio.on('disconnect')
-def disconnect():
+@sio.event
+async def disconnect(sid, reason):
     if not socket_request_is_valid(request):
         return
     
@@ -221,7 +229,7 @@ def disconnect():
     app.logger.info(f"User with nickname {nickname} and uuid {player_uuid} disconnected from game {gamecode}")
 
 @sio.on('start_game')
-def start_game():
+async def start_game():
     if not socket_request_is_valid(request):
         disconnect()
         return
@@ -243,7 +251,7 @@ def start_game():
         next_turn(gamecode)
 
 @sio.on('reset_game')
-def reset_game():
+async def reset_game():
     if not socket_request_is_valid(request):
         disconnect()
         return
@@ -257,7 +265,7 @@ def reset_game():
         game.reset_game()
         sio.emit('update_scores', [], to=str(gamecode))
 
-def next_turn(gamecode):
+async def next_turn(gamecode):
     if not socket_request_is_valid(request):
         disconnect()
         return
@@ -291,15 +299,14 @@ def next_turn(gamecode):
         countdown_thread = threading.Thread(target=start_countdown, args=(gamecode, COUNT_DOWN_SECONDS, game.kanji_data["Kanji"]))
         countdown_thread.start()
 
-def start_countdown(gamecode, duration_sec, selectedCharacter):
-    time.sleep(10)
+async def start_countdown(gamecode, duration_sec, selectedCharacter):
+    await asyncio.sleep.sleep(duration_sec)
     app.logger.debug(f"Countdown on game with gamecode {gamecode} finished!")
     # for remaining in range(duration_sec, -1, -1):
     #     time_str = f"{remaining // 60:02}:{remaining % 60:02}"
     #     sio.emit('timer_update', {'time': time_str}, to=str(gamecode))
     #     time.sleep(1)
 
-    # game = game_dict[gamecode]
     sio.emit('show_answer', {
         'selectedCharacter': selectedCharacter,
         'characterImage': character_to_image_name.get(selectedCharacter, "unknown.png")
@@ -313,7 +320,7 @@ def start_countdown(gamecode, duration_sec, selectedCharacter):
 
 ## TODO: Update this method according to the docstring
 @sio.on('submit_choice')
-def choice_submitted(data):
+async def choice_submitted(data):
     """
      This function check if the kanji guess by the client is right one
      If it's the case, the player's score is update by a certain amount f(t, n)
@@ -348,7 +355,7 @@ def choice_submitted(data):
             } for pid, score in scores.items()], to=str(gamecode))
 
 @sio.on('get_characters')
-def getCharacters(data):
+async def getCharacters(data):
     if not socket_request_is_valid(request):
         disconnect()
         return
@@ -370,4 +377,5 @@ def getCharacters(data):
 
 
 if __name__ == "__main__":
-    sio.run(app, debug=True, host="127.0.0.1", port=3000)
+    init()
+    sio.run(tapp, debug=True, host="127.0.0.1", port=3000)
