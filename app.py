@@ -54,12 +54,19 @@ app.logger.debug("Loading is done.")
 def home():
     nickname = request.args.get("nickname")
     if nickname == None:
-        return render_template("index.html")
+        nickname_suggestion = ""
+        if "nickname" in request.cookies:
+            nickname_suggestion = request.cookies["nickname"]
+        return render_template("index.html", nickname_suggestion=nickname_suggestion)
     else:
         gamecode = create_game()
         app.logger.info(f"Created game with code {gamecode}")
         session["nickname"] = nickname
-        return redirect(f"/game/{gamecode}", code=302)
+        
+        resp = redirect(f"/game/{gamecode}", code=302)
+        # Save nickname for future suggestions
+        resp.set_cookie("nickname", nickname)
+        return resp
 
 # TODO: when more games are created, game creation slows down (should fix)
 def create_game():
@@ -109,6 +116,9 @@ def join_game(gamecode):
             if uuid_ == None:
                 uuid_ = str(uuid.uuid4())
                 resp.set_cookie("uuid", uuid_, httponly=True)
+            
+            # Save nickname for future suggestions
+            resp.set_cookie("nickname", nickname)
 
             # Try to add player
             if game.add_player(uuid_, nickname):
@@ -120,7 +130,10 @@ def join_game(gamecode):
 
         # Send user to pick nickname
         else:
-            return render_template("index.html")
+            nickname_suggestion = ""
+            if "nickname" in request.cookies:
+                nickname_suggestion = request.cookies["nickname"]
+            return render_template("index.html", nickname_suggestion=nickname_suggestion)
 
 @app.route("/game/<gamecode>/lobby")
 def join_lobby(gamecode):
