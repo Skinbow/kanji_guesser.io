@@ -156,22 +156,31 @@ def join_lobby(gamecode):
 
 #################### Socket logic ####################
 
-@sio.on('connect')
-def connect():
+def socket_request_is_valid(request):
     player_uuid = request.cookies.get("uuid")
     gamecode = session.get("gamecode")
-
+    
     if gamecode == None \
     or gamecode not in game_dict:
-        # Game not found page
-        return render_template("error_page.html", error_msg="Game not found!")
+        return False
     
     game = game_dict[gamecode]
 
     if player_uuid == None \
-    or not game_dict[gamecode].player_in_game(player_uuid):
-        # User not in game
-        return render_template("error_page.html", error_msg="You have done something wrong!")
+    or not game.player_in_game(player_uuid):
+        return False
+    
+    return True
+
+@sio.on('connect')
+def connect():
+    if not socket_request_is_valid(request):
+        disconnect()
+        return
+
+    player_uuid = request.cookies.get("uuid")
+    gamecode = session.get("gamecode")
+    game = game_dict[gamecode]
 
     player = game.connected_players.get(player_uuid)
     player.set_socketid(request.sid)
@@ -179,9 +188,10 @@ def connect():
     # Make the client join the right room upon connection
     join_room(str(gamecode))
 
-    app.logger.debug(f"{[game.connected_players[id].nickname for id in game.connected_players]}") # DEBUG
+    app.logger.debug(f"{[game.connected_players[id].nickname for id in game.connected_players]}")
     app.logger.debug("player_list for" + str(gamecode))
-    # Socket messaging
+    
+    # Send updated player list
     sio.emit("player_list", {
         'player_nicknames' : [p.nickname for p in game.connected_players.values()],
         'player_ids': [p.publicid for p in game.connected_players.values()]
@@ -189,32 +199,38 @@ def connect():
 
 @sio.on('disconnect')
 def disconnect():
+    if not socket_request_is_valid(request):
+        return
+    
     player_uuid = request.cookies.get("uuid")
     gamecode = session.get("gamecode")
-
-    if gamecode != None and player_uuid != None:
-        game = game_dict[gamecode]
-        
-        player = game.connected_players.get(player_uuid)
-        nickname = player.nickname
-
-        if game.in_progress:
-            game.disconnect_player(player_uuid)
-        else:
-            game.remove_player(player_uuid)
+    game = game_dict[gamecode]
     
-        # Remove game
-        if game.is_empty():
-            game_dict.pop(gamecode)
+    player = game.connected_players.get(player_uuid)
+    nickname = player.nickname
 
-        app.logger.info(f"User with nickname {nickname} and uuid {player_uuid} disconnected from game {gamecode}")
+    if game.in_progress:
+        game.disconnect_player(player_uuid)
+    else:
+        game.remove_player(player_uuid)
+
+    # Remove game
+    if game.is_empty():
+        game_dict.pop(gamecode)
+
+    app.logger.info(f"User with nickname {nickname} and uuid {player_uuid} disconnected from game {gamecode}")
 
 @sio.on('start_game')
 def start_game():
+    if not socket_request_is_valid(request):
+        disconnect()
+        return
+    
     player_uuid = request.cookies.get("uuid")
     gamecode = session.get("gamecode")
-    if gamecode != None and player_uuid != None and game_dict[gamecode].admin == player_uuid:
-        game = game_dict[gamecode]
+    game = game_dict[gamecode]
+    
+    if game.admin == player_uuid:
         app.logger.info(f"Game with code {gamecode} started!")
 
         game.start_game(NUMBER_OF_ROUNDS)
@@ -228,14 +244,25 @@ def start_game():
 
 @sio.on('reset_game')
 def reset_game():
+    if not socket_request_is_valid(request):
+        disconnect()
+        return
+    
     player_uuid = request.cookies.get("uuid")
     gamecode = session.get("gamecode")
-    if gamecode != None and player_uuid != None and game_dict[gamecode].admin == player_uuid:
+    game = game_dict[gamecode]
+
+    if game.admin == player_uuid:
         app.logger.info(f"Game with code {gamecode} has been reset")
-        game_dict[gamecode].reset_game()
+        game.reset_game()
         sio.emit('update_scores', [], to=str(gamecode))
 
 def next_turn(gamecode):
+    if not socket_request_is_valid(request):
+        disconnect()
+        return
+    
+    gamecode = session.get("gamecode")
     game = game_dict[gamecode]
 
     # Game over
@@ -293,11 +320,15 @@ def choice_submitted(data):
      f(t, n) = the score obtain by the player's guess, where
      t = the time it took to guess, n = the number of players which have already guessed
     """
+    if not socket_request_is_valid(request):
+        disconnect()
+        return
+    
     player_uuid = request.cookies.get("uuid")
     gamecode = session.get("gamecode")
+    game = game_dict[gamecode]
     
-    if gamecode != None and player_uuid != None and game_dict[gamecode].selected_player != player_uuid:
-        game = game_dict[gamecode]
+    if game.selected_player != player_uuid:
         # TODO: Need to have a way to associate returned kanji with the kanji_data entry
         # (right now they aren't always the same because of the hiragana transcription) 
         if "choice" in data and data["choice"] == game.kanji_data["Kanji"]:
@@ -318,6 +349,10 @@ def choice_submitted(data):
 
 @sio.on('get_characters')
 def getCharacters(data):
+    if not socket_request_is_valid(request):
+        disconnect()
+        return
+
     # This function will edit the 10 cells below the canva with the 10 most probable kanjis from the drawing
     image_b64 = data["image"]
     image_b64 = image_b64.split(",")[1]
