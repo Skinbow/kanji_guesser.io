@@ -6,6 +6,7 @@ from flask import Flask, app, render_template, request, jsonify, send_from_direc
 from asgiref.wsgi import WsgiToAsgi
 from random import randint
 
+import uvicorn
 import asyncio
 import socketio
 import logging
@@ -378,4 +379,4 @@ async def getCharacters(data):
 
 if __name__ == "__main__":
     init()
-    sio.run(tapp, debug=True, host="127.0.0.1", port=3000)
+    uvicorn.run(tapp, host="127.0.0.1", port=3000)
