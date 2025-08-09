@@ -166,7 +166,7 @@ async def join_lobby(gamecode):
     if nickname == None \
         or request.cookies.get("uuid") == None \
         or not game.player_in_game(request.cookies.get("uuid")):
-        return redirect("/")
+        return redirect(f"/game/{gamecode}")
     
     session["gamecode"] = gamecode
 
@@ -274,9 +274,15 @@ async def disconnect(sid, reason):
     
     # Remove game after 10s of inactivity
     if game.is_empty():
-        game_dict.pop(gamecode)
+        await asyncio.create_task(game_remove_countdown(gamecode))
 
-    app.logger.info(f"User with nickname {nickname} and uuid {player_uuid} disconnected from game {gamecode}")
+
+async def game_remove_countdown(gamecode):
+    await asyncio.sleep(10)
+    if game_dict[gamecode].is_empty():
+        game_dict.pop(gamecode)
+    else:
+        logger.debug(f"Game with gamecode {gamecode} was not removed, as someone joined.")
 
 @sio.event
 async def start_game(sid):
