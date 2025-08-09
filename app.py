@@ -2,9 +2,10 @@ NUMBER_OF_TOP_SCORES = 1  # Number of top scores to keep
 NUMBER_OF_ROUNDS = 2 # Number of rounds in the game
 COUNT_DOWN_SECONDS = 100  # Countdown duration in seconds
 
-from flask import Flask, app, render_template, request, jsonify, send_from_directory, redirect, make_response, session
+from flask import Flask, app, render_template, request, redirect, make_response, session
 from asgiref.wsgi import WsgiToAsgi
 from random import randint
+from http.cookies import SimpleCookie
 
 import uvicorn
 import asyncio
@@ -23,23 +24,31 @@ from libraries.KanjiRecognition import *
 
 game_dict = {}
 
-
+# Flask setup
 app = Flask(__name__)
 app.config.from_pyfile('config.py')
-app.logger.handlers[0].setFormatter(logging.Formatter("[%(levelname)s | %(asctime)s]: %(message)s"))
 app.secret_key = secrets.token_hex()
-app.logger.setLevel("DEBUG")
 
+# Logger setup
+logger = logging.getLogger(__name__)
+sh = logging.StreamHandler()
+sh.setFormatter(logging.Formatter("[%(levelname)s | %(asctime)s]: %(message)s"))
+logger.addHandler(sh)
+logger.setLevel("DEBUG")
+
+# Turn WSGI Flak app into ASGI
 asgi_app = WsgiToAsgi(app)
 
+# Python-socketio server creation
 sio = socketio.AsyncServer(async_mode="asgi")
-tapp = socketio.ASGIApp(sio, asgi_app)
 
+# Gathering ASGI Flask and python-socketio apps into one
+tapp = socketio.ASGIApp(sio, asgi_app)
 
 #------------------------------------------------------------
 def init():
-    global kanji_df, labels, reference_vectors, model, transform, device
-    app.logger.debug("Loading the model...")
+    global device, model, transform, labels, reference_vectors, kanji_df
+    logger.debug("Loading the model...")
     kanji_df = get_kanji_dataframe("static/models/csv/marugoto_a1_kanji_furigana.csv")
     device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
     model = load_model("static/models/Model_250.pth", device)
@@ -55,7 +64,7 @@ def init():
     ])
 
     labels, reference_vectors = get_reference_vectors(model, device, "static/models/references/", transform)
-    app.logger.debug("Loading is done.")
+    logger.debug("Loading is done.")
 #------------------------------------------------------------
 
 # Home page asks for nickname and sends user to game page
@@ -69,7 +78,7 @@ async def home():
         return render_template("index.html", nickname_suggestion=nickname_suggestion)
     else:
         gamecode = create_game()
-        app.logger.info(f"Created game with code {gamecode}")
+        logger.info(f"Created game with code {gamecode}")
         session["nickname"] = nickname
         
         resp = redirect(f"/game/{gamecode}", code=302)
@@ -105,7 +114,7 @@ async def join_game(gamecode):
             resp = make_response(redirect(f"/game/{gamecode}/lobby", code=302))
             resp.set_cookie("reconnect")
 
-            app.logger.info(f"User with nickname {nickname} and uuid {uuid_} reconnected to game {gamecode}")
+            logger.info(f"User with nickname {nickname} and uuid {uuid_} reconnected to game {gamecode}")
             return resp
         else:
             return render_template("error_page.html", error_msg="Lobby is full!")
@@ -128,10 +137,11 @@ async def join_game(gamecode):
             
             # Save nickname for future suggestions
             resp.set_cookie("nickname", nickname)
+            session["uuid"] = uuid_
 
             # Try to add player
             if game.add_player(uuid_, nickname):
-                app.logger.info(f"User with nickname {nickname} and uuid {uuid_} connected to game {gamecode}")
+                logger.info(f"User with nickname {nickname} and uuid {uuid_} connected to game {gamecode}")
                 return resp
             else:
                 # Lobby full
@@ -165,10 +175,7 @@ async def join_lobby(gamecode):
 
 #################### Socket logic ####################
 
-def socket_request_is_valid(request):
-    player_uuid = request.cookies.get("uuid")
-    gamecode = session.get("gamecode")
-    
+async def socket_request_is_valid(player_uuid, gamecode):
     if gamecode == None \
     or gamecode not in game_dict:
         return False
@@ -182,37 +189,71 @@ def socket_request_is_valid(request):
     return True
 
 @sio.event
-async def connect(sid, environ, auth):
-    if not socket_request_is_valid(request):
-        disconnect()
+async def connect(sid, environ):
+    player_uuid = ""
+    # Extract player uuid from http cookie
+    for header in environ.get("asgi.scope").get("headers"):
+        if header[0] == b"cookie":
+            cookie = SimpleCookie()
+            cookie.load(header[1].decode())
+            cookies = {k: v.value for k, v in cookie.items()}
+            
+            player_uuid = cookies.get("uuid", "")
+
+    if player_uuid == "":
+        await sio.disconnect(sid)
+    else:
+        await sio.save_session(sid, {"uuid": player_uuid})
+    
+    logger.debug(f"Connected player's id: {player_uuid}")
+
+@sio.event
+async def connect_info(sid, data):
+    gamecode = data["gamecode"]
+    
+    # Adding gamecode to socket session data
+    sock_session = await sio.get_session(sid)
+    sock_session["gamecode"] = gamecode
+    await sio.save_session(sid, sock_session)
+
+    player_uuid = sock_session.get("uuid")
+
+    if not await socket_request_is_valid(player_uuid, gamecode):
+        logger.debug("Invalid 1")
+        logger.debug(f"{player_uuid} {gamecode}")
+        await sio.disconnect(sid)
         return
 
-    player_uuid = environ.cookies.get("uuid")
-    gamecode = session.get("gamecode")
     game = game_dict[gamecode]
 
+    # Save socket id
     player = game.connected_players.get(player_uuid)
-    player.set_socketid(request.sid)
-    
-    # Make the client join the right room upon connection
-    join_room(str(gamecode))
+    player.set_socketid(sid)
 
-    app.logger.debug(f"{[game.connected_players[id].nickname for id in game.connected_players]}")
-    app.logger.debug("player_list for" + str(gamecode))
-    
+    # Make the client join the right room upon connection
+    await sio.enter_room(sid, str(gamecode))
+
+    logger.debug(f"{[game.connected_players[id].nickname for id in game.connected_players]}")
+    logger.debug("player_list for" + str(gamecode))
+
     # Send updated player list
-    sio.emit("player_list", {
+    await sio.emit("player_list", {
         'player_nicknames' : [p.nickname for p in game.connected_players.values()],
         'player_ids': [p.publicid for p in game.connected_players.values()]
     }, to=str(gamecode))
 
+    logger.debug(f"Sent player list to {game.connected_players[player_uuid].nickname}")
+
 @sio.event
 async def disconnect(sid, reason):
-    if not socket_request_is_valid(request):
+    sock_session = await sio.get_session(sid)
+    player_uuid = sock_session.get("uuid")
+    gamecode = sock_session.get("gamecode")
+
+    if not await socket_request_is_valid(player_uuid, gamecode):
+        logger.debug("Invalid 2 " + sid)
         return
     
-    player_uuid = request.cookies.get("uuid")
-    gamecode = session.get("gamecode")
     game = game_dict[gamecode]
     
     player = game.connected_players.get(player_uuid)
@@ -223,62 +264,71 @@ async def disconnect(sid, reason):
     else:
         game.remove_player(player_uuid)
 
-    # Remove game
+    # Notify other players
+    await sio.emit("player_list", {
+        'player_nicknames' : [p.nickname for p in game.connected_players.values()],
+        'player_ids': [p.publicid for p in game.connected_players.values()]
+    }, to=str(gamecode))
+
+    logger.info(f"User with nickname {nickname} and uuid {player_uuid} disconnected from game {gamecode}")
+    
+    # Remove game after 10s of inactivity
     if game.is_empty():
         game_dict.pop(gamecode)
 
     app.logger.info(f"User with nickname {nickname} and uuid {player_uuid} disconnected from game {gamecode}")
 
-@sio.on('start_game')
-async def start_game():
-    if not socket_request_is_valid(request):
-        disconnect()
+@sio.event
+async def start_game(sid):
+    sock_session = await sio.get_session(sid)
+    player_uuid = sock_session.get("uuid")
+    gamecode = sock_session.get("gamecode")
+
+    if not await socket_request_is_valid(player_uuid, gamecode):
+        logger.debug("Invalid 3")
+        await sio.disconnect(sid)
         return
     
-    player_uuid = request.cookies.get("uuid")
-    gamecode = session.get("gamecode")
     game = game_dict[gamecode]
     
     if game.admin == player_uuid:
-        app.logger.info(f"Game with code {gamecode} started!")
+        logger.info(f"Game with code {gamecode} started!")
 
         game.start_game(NUMBER_OF_ROUNDS)
 
-        sio.emit('round_started', {
+        await sio.emit('round_started', {
             'current_round': game.current_round,
             'total_rounds': NUMBER_OF_ROUNDS
         }, to=str(gamecode))
 
-        next_turn(gamecode)
+        asyncio.create_task(next_turn(gamecode))
 
-@sio.on('reset_game')
-async def reset_game():
-    if not socket_request_is_valid(request):
-        disconnect()
+@sio.event
+async def reset_game(sid):
+    sock_session = await sio.get_session(sid)
+    player_uuid = sock_session.get("uuid")
+    gamecode = sock_session.get("gamecode")
+
+    if not await socket_request_is_valid(player_uuid, gamecode):
+        logger.debug("Invalid 4")
+        await sio.disconnect(sid)
         return
-    
-    player_uuid = request.cookies.get("uuid")
-    gamecode = session.get("gamecode")
+
     game = game_dict[gamecode]
 
     if game.admin == player_uuid:
-        app.logger.info(f"Game with code {gamecode} has been reset")
+        logger.info(f"Game with code {gamecode} has been reset")
         game.reset_game()
-        sio.emit('update_scores', [], to=str(gamecode))
+        await sio.emit('update_scores', [], to=str(gamecode))
 
 async def next_turn(gamecode):
-    if not socket_request_is_valid(request):
-        disconnect()
-        return
-    
-    gamecode = session.get("gamecode")
     game = game_dict[gamecode]
 
     # Game over
     if not game.next_turn():
-        app.logger.info(f"Game with gamecode {gamecode} ended")
+        logger.info(f"Game with gamecode {gamecode} ended")
         scores = game.get_scores()
-        sio.emit('game_over', [{
+        await sio.emit('game_over', [{
             "name": game.connected_players[pid].nickname, 
             "score": score
         } for pid, score in scores.items()], to=str(gamecode))
@@ -286,34 +336,33 @@ async def next_turn(gamecode):
         # Once the game is over, we have to reset it to initial state
         game.reset_game()
     else:
-        sio.emit("you_are_clue_giver", {'kanji': game.kanji_data}, to=game.selected_player.socketid)
+        await sio.emit("you_are_clue_giver", {'kanji': game.kanji_data}, to=game.selected_player.socketid)
 
-        sio.emit("someone_was_selected", {
+        await sio.emit("someone_was_selected", {
             'selectedPlayerId': game.selected_player.publicid,
             'selectedPlayerNickname': game.selected_player.nickname,
             'selectedCharacter': game.kanji_data["Kanji"],
             'characterImage': character_to_image_name.get(game.kanji_data["Kanji"], "unknown.png")
         }, to=str(gamecode))
 
-        app.logger.info(f"Game with gamecode {gamecode} next turn")
+        logger.info(f"Game with gamecode {gamecode} next turn")
 
-        countdown_thread = threading.Thread(target=start_countdown, args=(gamecode, COUNT_DOWN_SECONDS, game.kanji_data["Kanji"]))
-        countdown_thread.start()
+        await start_countdown(gamecode, COUNT_DOWN_SECONDS, game.kanji_data["Kanji"])
 
 async def start_countdown(gamecode, duration_sec, selectedCharacter):
-    await asyncio.sleep.sleep(duration_sec)
-    app.logger.debug(f"Countdown on game with gamecode {gamecode} finished!")
+    await asyncio.sleep(duration_sec)
+    logger.debug(f"Countdown on game with gamecode {gamecode} finished!")
     # for remaining in range(duration_sec, -1, -1):
     #     time_str = f"{remaining // 60:02}:{remaining % 60:02}"
     #     sio.emit('timer_update', {'time': time_str}, to=str(gamecode))
     #     time.sleep(1)
 
-    sio.emit('show_answer', {
+    await sio.emit('show_answer', {
         'selectedCharacter': selectedCharacter,
         'characterImage': character_to_image_name.get(selectedCharacter, "unknown.png")
     }, to=str(gamecode))
 
-    next_turn(gamecode)
+    await next_turn(gamecode)
 
 # @sio.on('request_top_number')
 # def request_top_number():
@@ -321,44 +370,52 @@ async def start_countdown(gamecode, duration_sec, selectedCharacter):
 
 ## TODO: Update this method according to the docstring
 @sio.on('submit_choice')
-async def choice_submitted(data):
+async def choice_submitted(sid, data):
     """
      This function check if the kanji guess by the client is right one
      If it's the case, the player's score is update by a certain amount f(t, n)
      f(t, n) = the score obtain by the player's guess, where
      t = the time it took to guess, n = the number of players which have already guessed
     """
-    if not socket_request_is_valid(request):
-        disconnect()
+    sock_session = await sio.get_session(sid)
+    player_uuid = sock_session.get("uuid")
+    gamecode = sock_session.get("gamecode")
+
+    if not await socket_request_is_valid(player_uuid, gamecode):
+        logger.debug("Invalid 5")
+        await sio.disconnect(sid)
         return
     
-    player_uuid = request.cookies.get("uuid")
-    gamecode = session.get("gamecode")
     game = game_dict[gamecode]
     
     if game.selected_player != player_uuid:
         # TODO: Need to have a way to associate returned kanji with the kanji_data entry
         # (right now they aren't always the same because of the hiragana transcription) 
         if "choice" in data and data["choice"] == game.kanji_data["Kanji"]:
-            app.logger.debug(f"Correct guess from {player_uuid} in game {gamecode}")
+            logger.debug(f"Correct guess from {player_uuid} in game {gamecode}")
             if player_uuid not in game_dict[gamecode].player_scores:
                 game.player_scores[player_uuid] = 1
             else:
                 game.player_scores[player_uuid] += 1
             # print the current player scores
-            app.logger.debug(f"Current player scores: {game.get_scores()}")
+            logger.debug(f"Current player scores: {game.get_scores()}")
             
             scores = game.get_scores()
             
-            sio.emit('update_scores', [{
+            await sio.emit('update_scores', [{
                 "name": game.connected_players[pid].nickname,
                 "score": score
             } for pid, score in scores.items()], to=str(gamecode))
 
-@sio.on('get_characters')
-async def getCharacters(data):
-    if not socket_request_is_valid(request):
-        disconnect()
+@sio.event
+async def get_characters(sid, data):
+    sock_session = await sio.get_session(sid)
+    player_uuid = sock_session.get("uuid")
+    gamecode = sock_session.get("gamecode")
+
+    if not await socket_request_is_valid(player_uuid, gamecode):
+        logger.debug("Invalid 6")
+        await sio.disconnect(sid)
         return
 
     # This function will edit the 10 cells below the canva with the 10 most probable kanjis from the drawing
@@ -374,9 +431,14 @@ async def getCharacters(data):
     # Remove temporary file
     Path(filename).unlink()
 
-    sio.emit('characters_result', {'characters': predicted_labels}, to=request.sid)
+    await sio.emit('characters_result', {'characters': predicted_labels}, to=sid)
 
+async def main():
+    config = uvicorn.Config(tapp, host="127.0.0.1", port=3000)
+    server = uvicorn.Server(config)
+    await server.serve()
 
 if __name__ == "__main__":
     init()
-    uvicorn.run(tapp, host="127.0.0.1", port=3000)
+    asyncio.run(main())
+    

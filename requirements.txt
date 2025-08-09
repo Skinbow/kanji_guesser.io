@@ -1,7 +1,9 @@
-Flask
-Flask-SocketIO
+asgiref
+flask[async]
 pathlib
 pandas
+python-socketio
 torch
 torchvision
 timm
+uvicorn

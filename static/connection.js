@@ -1,9 +1,12 @@
 // -----------------------------------------
 
+const gamecodeRe = new RegExp("/game/([0-9a-fA-F]{6})/.*");
+const gamecode = window.location.pathname.match(gamecodeRe)[1];
+
 // Handling socket
 const socket = io();
 socket.on("connect", () => {
-    console.log(socket.id);
+    socket.emit("connect_info", {"gamecode": gamecode});
 });
 
 function getCookie(name) {
