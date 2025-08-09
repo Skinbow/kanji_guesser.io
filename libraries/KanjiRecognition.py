@@ -2,8 +2,8 @@ import pandas as pd
 import os
 import torch
 import torch.nn.functional as F
-from torchvision import transforms
 from PIL import Image
+import timm
 
 class EfficientNetEmbedding(torch.nn.Module):
     def __init__(self, model_name='efficientnetv2_s', embedding_dim=128):

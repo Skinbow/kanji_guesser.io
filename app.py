@@ -15,7 +15,6 @@ import base64, uuid, re
 import secrets
 
 from src.game import Game
-from src.player import Player
 from src.utils import *
 
 from libraries.KanjiRecognition import *
