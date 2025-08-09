@@ -1,6 +1,6 @@
 NUMBER_OF_TOP_SCORES = 1  # Number of top scores to keep
 NUMBER_OF_ROUNDS = 2 # Number of rounds in the game
-COUNT_DOWN_SECONDS = 100  # Countdown duration in seconds
+COUNT_DOWN_SECONDS = 20  # Countdown duration in seconds
 
 from flask import Flask, app, render_template, request, redirect, make_response, session
 from asgiref.wsgi import WsgiToAsgi
