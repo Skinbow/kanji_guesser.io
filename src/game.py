@@ -24,6 +24,7 @@ class Game:
         self.selected_character = None
         self.current_round = 1
         self.guess_found = False
+        self.guess_found_flag = None
 
     def is_empty(self):
         return len(self.connected_players) == 0
@@ -135,3 +136,8 @@ class Game:
         # sorted_scores = sorted(self.player_scores.items(), key=lambda item: item[1], reverse=True)
         # top_scores = sorted_scores[:num]
         #return top_scores
+    
+    async def set_guess_found(self, v):
+        self.guess_found = v
+        if v and self.guess_found_flag != None:
+            self.guess_found_flag.set()

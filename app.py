@@ -19,8 +19,6 @@ from src.utils import *
 
 from libraries.KanjiRecognition import *
 
-# TODO : Add an event which handle the end of a round and give the reason (timer ended or everyone guessed)
-
 game_dict = {}
 
 # Flask setup
@@ -355,18 +353,23 @@ async def next_turn(gamecode):
         await start_countdown(gamecode, COUNT_DOWN_SECONDS, game.kanji_data["Kanji"])
 
 async def start_countdown(gamecode, duration_sec, selectedCharacter):
-    await asyncio.sleep(duration_sec)
-    logger.debug(f"Countdown on game with gamecode {gamecode} finished!")
-    # for remaining in range(duration_sec, -1, -1):
-    #     time_str = f"{remaining // 60:02}:{remaining % 60:02}"
-    #     sio.emit('timer_update', {'time': time_str}, to=str(gamecode))
-    #     time.sleep(1)
+    game = game_dict[gamecode]
+    
+    game.guess_found_flag = asyncio.Event()
+    guessed = True
+    try:
+        await asyncio.wait_for(game.guess_found_flag.wait(), duration_sec)
+        guessed = True
+    except asyncio.TimeoutError:
+        logger.debug(f"Countdown on game with gamecode {gamecode} finished!")
+        guessed = False
 
-    await sio.emit('show_answer', {
+    await sio.emit('round_ended', {
         'selectedCharacter': selectedCharacter,
-        'characterImage': character_to_image_name.get(selectedCharacter, "unknown.png")
+        'characterImage': character_to_image_name.get(selectedCharacter, "unknown.png"),
+        'guessed': guessed
     }, to=str(gamecode))
-
+    
     await next_turn(gamecode)
 
 # @sio.on('request_top_number')
@@ -406,6 +409,7 @@ async def choice_submitted(sid, data):
             logger.debug(f"Current player scores: {game.get_scores()}")
             
             scores = game.get_scores()
+            await game.set_guess_found(True)
             
             await sio.emit('update_scores', [{
                 "name": game.connected_players[pid].nickname,

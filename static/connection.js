@@ -95,13 +95,15 @@ socket.on("someone_was_selected", (data) => {
 });
 
 // Show the right answer in this round
-socket.on("show_answer", (data) => {
-    console.log("show_answer");
+socket.on("round_ended", (data) => {
+    console.log("round_ended");
     const kanji = data.selectedCharacter;
     const kanjiImage = data.characterImage;
+    const someone_guessed = data.guessed;
 
     console.log(kanji);
     console.log(kanjiImage);
+    console.log("Someone guessed: " + someone_guessed);
     // TODO : Show the kanji (if the image is the way it is draw, its useful, otherwise we don't need it)
 
 });
@@ -158,7 +160,7 @@ socket.on("game_over", (data) => {
 // "you_are_drawer"
 // "someone_was_selected"
 // 'timer_update'???
-// 'show_answer'
+// 'round_ended'
 // 'round_started'
 // 'update_scores'
 // 'game_over'
