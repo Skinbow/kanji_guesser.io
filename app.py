@@ -292,11 +292,17 @@ async def disconnect(sid, reason):
 
 
 async def game_remove_countdown(gamecode):
-    await asyncio.sleep(10)
-    if game_dict[gamecode].is_empty():
-        game_dict.pop(gamecode)
-    else:
+    game = game_dict[gamecode]
+    game.connection_flag = asyncio.Event()
+    try:
+        # Avoid removing game if someone joins within 10s
+        await asyncio.wait_for(game.connection_flag.wait(), 10)
         logger.debug(f"Game with gamecode {gamecode} was not removed, as someone joined.")
+    except asyncio.TimeoutError:
+        # Remove game if no one joins for 10s
+        if gamecode in game_dict and game_dict[gamecode].is_empty():
+            logger.debug(f"Game with gamecode {gamecode} was removed, as no one joined.")
+            game_dict.pop(gamecode)        
 
 @sio.event
 async def start_game(sid):
@@ -342,7 +348,10 @@ async def reset_game(sid):
         await sio.emit('update_scores', [], to=str(gamecode))
 
 async def next_turn(gamecode):
-    game = game_dict[gamecode]
+    game = game_dict.get(gamecode)
+    if game == None:
+        # Possible if everyone left and game was deleted
+        return
 
     # Game over
     if not game.next_turn():
@@ -370,7 +379,10 @@ async def next_turn(gamecode):
         await start_countdown(gamecode, COUNT_DOWN_SECONDS, game.kanji_data["Kanji"])
 
 async def start_countdown(gamecode, duration_sec, selectedCharacter):
-    game = game_dict[gamecode]
+    game = game_dict.get(gamecode)
+    if game == None:
+        # Possible if everyone left and game was deleted
+        return
     
     game.guess_found_flag = asyncio.Event()
     guessed = True

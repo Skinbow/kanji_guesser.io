@@ -9,13 +9,14 @@ class Game:
     def __init__(self):
         # Server logic
         self.connected_players = {}
-        self.ingame_players = {}
+        self.connection_flag = None
         self.admin = None
         self.disconnected_players = {}
         self.used_publicids = []
         self.available_publicids = list(range(MAX_PLAYERS))
-        self.in_progress = False
+        
         self.rounds_num = 2
+        self.in_progress = False
 
         # Game logic
         self.round_queue = []
@@ -40,6 +41,8 @@ class Game:
             player.set_publicid(publicid)
             self.connected_players[player_uuid] = player
             self.player_scores[player_uuid] = 0
+            if self.connection_flag != None:
+                self.connection_flag.set()
             return True
     
     def remove_player(self, player_uuid):
@@ -71,6 +74,8 @@ class Game:
             publicid = self.get_new_publicid()
             player.set_publicid(publicid)
             self.connected_players[player_uuid] = player
+            if self.connection_flag != None:
+                self.connection_flag.set()
             return True
         else:
             return False
