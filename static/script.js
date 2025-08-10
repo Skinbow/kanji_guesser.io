@@ -1,11 +1,3 @@
-// Get the title's GIF
-const titleGif = document.getElementById("title-gif");
-// After X seconds change the gif to the shaking title
-setTimeout(() => {
-    titleGif.src = "static/resources/KanjiGuessr2.gif";
-}, 2500); 
-// -----------------------------------------
-
 function createGame() {
     const form = document.getElementById("gameForm");
     const nickname = form.nickname.value;

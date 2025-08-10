@@ -1,3 +1,12 @@
+// Get the title's GIF
+const titleGif = document.getElementById("title-gif");
+// Ensures gif plays from start despite caching
+titleGif.src = titleGif.src + "?" + new Date().getTime();
+// After X seconds change the gif to the shaking title
+setTimeout(() => {
+    titleGif.src = "/static/resources/KanjiGuessr2.gif";
+}, 2500); 
+
 // Raining effect with kanjis + hiragana + katakana
 const canvas = document.getElementById("matrixCanvas");
 const ctx = canvas.getContext("2d");
