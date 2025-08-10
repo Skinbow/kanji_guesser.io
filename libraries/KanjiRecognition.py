@@ -2,6 +2,7 @@ import pandas as pd
 import os
 import torch
 import torch.nn.functional as F
+from torchvision import transforms
 from PIL import Image
 import timm
 
