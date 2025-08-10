@@ -459,12 +459,7 @@ async def get_characters(sid, data):
 
     await sio.emit('characters_result', {'characters': predicted_labels}, to=sid)
 
-async def main():
-    config = uvicorn.Config(tapp, host="127.0.0.1", port=3000)
-    server = uvicorn.Server(config)
-    await server.serve()
-
 if __name__ == "__main__":
     init()
-    asyncio.run(main())
+    uvicorn.run(tapp, host="127.0.0.1", port=3000)
     
