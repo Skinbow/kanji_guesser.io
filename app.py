@@ -241,6 +241,23 @@ async def connect_info(sid, data):
 
     logger.debug(f"Sent player list to {game.connected_players[player_uuid].nickname}")
 
+    # If game has already started (or reconnection)
+    if game.in_progress:
+        await sio.emit('round_started', {
+            'current_round': game.current_round,
+            'total_rounds': NUMBER_OF_ROUNDS
+        }, to=sid)
+
+        if player_uuid == game.selected_player.uuid:
+            await sio.emit("you_are_clue_giver", {'kanji': game.kanji_data}, to=sid)
+        else:
+            await sio.emit("someone_was_selected", {
+                'selectedPlayerId': game.selected_player.publicid,
+                'selectedPlayerNickname': game.selected_player.nickname,
+                'selectedCharacter': game.kanji_data["Kanji"],
+                'characterImage': character_to_image_name.get(game.kanji_data["Kanji"], "unknown.png")
+            }, to=sid)
+
 @sio.event
 async def disconnect(sid, reason):
     sock_session = await sio.get_session(sid)
