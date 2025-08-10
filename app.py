@@ -72,7 +72,7 @@ async def home():
         nickname_suggestion = ""
         if "nickname" in request.cookies:
             nickname_suggestion = request.cookies["nickname"]
-        return render_template("index.html", nickname_suggestion=nickname_suggestion)
+        return render_template("index.html", nickname_suggestion=nickname_suggestion, gamecode="")
     else:
         gamecode = create_game()
         logger.info(f"Created game with code {gamecode}")
@@ -149,7 +149,7 @@ async def join_game(gamecode):
             nickname_suggestion = ""
             if "nickname" in request.cookies:
                 nickname_suggestion = request.cookies["nickname"]
-            return render_template("index.html", nickname_suggestion=nickname_suggestion)
+            return render_template("index.html", nickname_suggestion=nickname_suggestion, gamecode=gamecode)
 
 @app.route("/game/<gamecode>/lobby")
 async def join_lobby(gamecode):
