@@ -253,9 +253,7 @@ async def connect_info(sid, data):
         else:
             await sio.emit("someone_was_selected", {
                 'selectedPlayerId': game.selected_player.publicid,
-                'selectedPlayerNickname': game.selected_player.nickname,
-                'selectedCharacter': game.kanji_data["Kanji"],
-                'characterImage': character_to_image_name.get(game.kanji_data["Kanji"], "unknown.png")
+                'selectedPlayerNickname': game.selected_player.nickname
             }, to=sid)
 
 @sio.event
