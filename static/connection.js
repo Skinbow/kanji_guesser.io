@@ -2,6 +2,8 @@
 
 const gamecodeRe = new RegExp("/game/([0-9a-fA-F]{6})/.*");
 const gamecode = window.location.pathname.match(gamecodeRe)[1];
+let clueGiver = "";
+const scoresDict = {};
 
 // Handling socket
 const socket = io();
@@ -19,7 +21,6 @@ const nicknames = [];
 
 // Load the players nicknames on the bottom grid
 socket.on("player_list", (data) => {
-    console.log("player_list");
     nicknames.length = 0; // reset
     nicknames.push(...data.player_nicknames);
 
@@ -28,7 +29,7 @@ socket.on("player_list", (data) => {
 
     nicknames.forEach((nickname) => {
         const p = document.createElement("p");
-        console.log(nickname);
+        scoresDict[nickname] = 0;
         p.textContent = nickname;
         playerListDiv.appendChild(p);
     });
@@ -40,7 +41,6 @@ socket.on("characters_result", (data) => {
     const chars = data.characters;
     for (let i = 0; i < 10; i++) {
         const char = chars[i];
-        console.log(char);
         const cell = document.getElementById("cell-" + (i+1));
         cell.innerText = char;
     }
@@ -54,7 +54,7 @@ socket.on("you_are_clue_giver", (data) => {
     toggleTitle();
     switchElement("menu", clues);
     
-    const kanjiName = document.getElementById("kanji-name");
+    const kanjiName = document.getElementById("kanjiName");
     const furigana = document.getElementById("furigana");
     const explanation = document.getElementById("explanation");
     const construction = document.getElementById("construction");
@@ -75,6 +75,8 @@ socket.on("someone_was_selected", (data) => {
     console.log("someone_was_selected");
     //const playerID = data.selectedPlayerId; // Maybe I should keep a map between PID and Nickname ?
     const playerNickname = data.selectedPlayerNickname;
+    clueGiver = playerNickname;
+    
     toggleTitle();
 
     switchElement("menu", drawingZone);
@@ -84,10 +86,10 @@ socket.on("someone_was_selected", (data) => {
     let i = 0;
     paragraphs.forEach((p) => {
         if (p.innerText == playerNickname) {
-            p.innerHTML = "<b>" + p.innerText + " (Clue Giver)</b>";
+            p.innerHTML = "<b>" + p.innerText + " (Clue Giver)</b><br>" + scoresDict[nicknames[i]];
         }
         else {
-            p.innerText = nicknames[i];
+            p.innerText = nicknames[i] + "\n" + scoresDict[nicknames[i]];
             console.log(nicknames, i);
         }
         i = i + 1;
@@ -113,10 +115,6 @@ socket.on("round_started", (data) => {
     console.log("round_started");
     const currentRound = data.current_round;
     const totalRound = data.total_rounds;
-
-    console.log(currentRound);
-    console.log(totalRound);
-    // TODO : Show the currentRound over totalRound on the screen
     
     const roundsInfo = document.getElementById("rounds");
     roundsInfo.innerText = `Rounds : ${currentRound}/${totalRound}`
@@ -124,20 +122,23 @@ socket.on("round_started", (data) => {
 
 // Update the players scores
 socket.on("update_scores", (data) => {
-    console.log("update_scores");
     const players = data;
-    console.log(players);
-    // TODO : For each player, update its score
 
     const playerListDiv = document.getElementById("player-list");
     const paragraphs = playerListDiv.querySelectorAll("p");
 
-    // TODO : Work on it when updated (for now it doesn't work properly)
     let i = 0;
     paragraphs.forEach((p) => {
-        const name = players[i].name;
+        let name = "";
+        if (players[i].name == clueGiver) {
+            name = "<b>" + players[i].name + " (Clue Giver)</b><br>";
+        }
+        else {
+            name = players[i].name + "\n";
+        }
         const score = players[i].score;
-        p.innerText = `${name}\n${score}`;
+        scoresDict[players[i].name] = score;
+        p.innerText = `${name}${score}`;
         i = i + 1;
     });
 });
@@ -156,12 +157,7 @@ socket.on("game_over", (data) => {
 
 // TODO...
 // Treat the following messages:
-// "player_list" : Add ids
-// "you_are_drawer"
-// "someone_was_selected"
-// 'timer_update'???
 // 'round_ended'
-// 'round_started'
 // 'update_scores'
 // 'game_over'
 

@@ -120,6 +120,7 @@ html, body {
     gap: 1rem;
     justify-items: center;
     align-items: center;
+    text-align: center;
     font-family: Verdana;
     color: #7e160c;
 }
