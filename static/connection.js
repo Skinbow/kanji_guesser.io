@@ -7,6 +7,10 @@ let youAreClueGiver = false;
 const scoresDict = {};
 const menu = document.getElementById("menu"); // Store the menu to show it back on screen
 
+// Rounds number info
+let currentRound = 0;
+let totalRound = 0;
+
 // Handling socket
 const socket = io();
 socket.on("connect", () => {
@@ -39,7 +43,6 @@ socket.on("player_list", (data) => {
 
 // Add characters to the cells
 socket.on("characters_result", (data) => {
-    console.log("characters_result");
     const chars = data.characters;
     for (let i = 0; i < 10; i++) {
         const char = chars[i];
@@ -50,7 +53,6 @@ socket.on("characters_result", (data) => {
 
 // Tell the client it is the clue giver
 socket.on("you_are_clue_giver", (data) => {
-    console.log("you_are_clue_giver");
     const kanji = data.kanji;
     
     toggleTitle();
@@ -75,8 +77,6 @@ socket.on("you_are_clue_giver", (data) => {
 // Tell the client it is the guesser (should draw the kanji based on the clues)
 // And who is the clue giver
 socket.on("someone_was_selected", (data) => {
-    console.log("someone_was_selected");
-    //const playerID = data.selectedPlayerId; // Maybe I should keep a map between PID and Nickname ?
     const playerNickname = data.selectedPlayerNickname;
     clueGiver = playerNickname;
     
@@ -94,7 +94,6 @@ socket.on("someone_was_selected", (data) => {
         }
         else {
             p.innerText = nicknames[i] + "\n" + scoresDict[nicknames[i]];
-            console.log(nicknames, i);
         }
         i = i + 1;
     });
@@ -102,16 +101,17 @@ socket.on("someone_was_selected", (data) => {
 
 // Show the right answer in this round
 socket.on("round_ended", (data) => {
-    console.log("round_ended");
     const kanji = data.selectedCharacter;
     const kanjiImage = data.characterImage;
     const someone_guessed = data.guessed;
     youAreClueGiver = false; // Reset the flag of the clue giver on the client
     
-    console.log(kanji);
-    console.log(kanjiImage);
-    console.log("Someone guessed: " + someone_guessed);
-    // TODO : Show the kanji (if the image is the way it is draw, its useful, otherwise we don't need it)
+    // Update the number of round
+    if (currentRound < totalRound) currentRound++;
+    console.log(currentRound);
+    const roundsInfo = document.getElementById("rounds");
+    roundsInfo.innerText = `Rounds : ${currentRound}/${totalRound}`;
+
     const roundEndedInfo = document.getElementById("roundEndedInfo");
 
     if (someone_guessed) {
@@ -130,9 +130,8 @@ socket.on("round_ended", (data) => {
 
 // Get the information of the current round and the total number of rounds
 socket.on("round_started", (data) => {
-    console.log("round_started");
-    const currentRound = data.current_round;
-    const totalRound = data.total_rounds;
+    currentRound = data.current_round;
+    totalRound = data.total_rounds;
     
     const roundsInfo = document.getElementById("rounds");
     roundsInfo.innerText = `Rounds : ${currentRound}/${totalRound}`;
@@ -163,14 +162,10 @@ socket.on("update_scores", (data) => {
 
 // Update the players scores
 socket.on("game_over", (data) => {
-    console.log("game_over");
     const name = data.name;
     const score = data.score;
-
-    console.log(name);
-    console.log(score);
-    // Show a game over screen
     
+    // Game over's information about the winner.
     const roundEndedInfo = document.getElementById("roundEndedInfo");
     roundEndedInfo.innerHTML = `<b>Game Over! <br> Winner is ${name} with ${score} points.</b>`
 
