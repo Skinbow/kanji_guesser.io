@@ -110,6 +110,19 @@ html, body {
     font-family: Verdana;
 }
 
+#roundEndedInfo {
+    position: absolute;
+    top: 0;
+    width: 100%;
+    justify-items: center;
+    align-items: center;
+    text-align: center;
+    font-family: Verdana;
+    padding: 20pt;
+    font-size: 24pt;
+    color: #1d8503;
+}
+
 #player-list {
     position: absolute;
     bottom: 0;

@@ -16,24 +16,31 @@ drawingZone.innerHTML = `
     </div>
 </div>
 <div class="grid-container">
-  <div class="cell" id="cell-1"></div>
-  <div class="cell" id="cell-2"></div>
-  <div class="cell" id="cell-3"></div>
-  <div class="cell" id="cell-4"></div>
-  <div class="cell" id="cell-5"></div>
-  <div class="cell" id="cell-6"></div>
-  <div class="cell" id="cell-7"></div>
-  <div class="cell" id="cell-8"></div>
-  <div class="cell" id="cell-9"></div>
-  <div class="cell" id="cell-10"></div>
+  <div class="cell" id="cell-1">一</div>
+  <div class="cell" id="cell-2">二</div>
+  <div class="cell" id="cell-3">三</div>
+  <div class="cell" id="cell-4">四</div>
+  <div class="cell" id="cell-5">五</div>
+  <div class="cell" id="cell-6">六</div>
+  <div class="cell" id="cell-7">七</div>
+  <div class="cell" id="cell-8">八</div>
+  <div class="cell" id="cell-9">九</div>
+  <div class="cell" id="cell-10">十</div>
 </div>
-`
+`;
+drawingZone.id = "drawing";
+
+// Actual ID of the element on screen (default : "menu")
+let onScreen = "menu";
 
 // Function to swap two element in the DOM
 function switchElement(toChangeID, newElement) {
     const toChange = document.getElementById(toChangeID);
     if (!toChange) return; /* Invalid element */
     toChange.replaceWith(newElement);
+    // Change the value of the onScreen element
+    onScreen = newElement.id;
+    clearCanva();
 }
 
 function toggleTitle() {
@@ -47,9 +54,6 @@ function toggleTitle() {
 function startGame() {
     socket.emit("start_game");
 }
-
-// Temporary for dev
-// startGame();
 
 const drawCanvas = drawingZone.querySelector("#drawCanvas");
 const context = drawCanvas.getContext("2d", { willReadFrequently: true });
@@ -65,7 +69,6 @@ drawCanvas.addEventListener("pointermove", drawing);
 for (i = 0; i < 10; i++) {
     cell = drawingZone.querySelector(`#cell-${i+1}`);
     if (cell) {
-        console.log("Cell found : " + `#cell-${i+1}`);
         cell.addEventListener("click", (event) => {
             console.log(`Submit : ${event.target.textContent}`);
             socket.emit("submit_choice", { "choice": event.target.textContent});

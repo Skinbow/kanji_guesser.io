@@ -7,3 +7,4 @@ clues.innerHTML = `
 <p id="construction" class="clues"></p>
 <p id="example" class="clues"></p>
 `
+clues.id = "cluesInfo";

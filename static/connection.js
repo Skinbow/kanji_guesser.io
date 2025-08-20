@@ -3,7 +3,9 @@
 const gamecodeRe = new RegExp("/game/([0-9a-fA-F]{6})/.*");
 const gamecode = window.location.pathname.match(gamecodeRe)[1];
 let clueGiver = "";
+let youAreClueGiver = false;
 const scoresDict = {};
+const menu = document.getElementById("menu"); // Store the menu to show it back on screen
 
 // Handling socket
 const socket = io();
@@ -52,7 +54,8 @@ socket.on("you_are_clue_giver", (data) => {
     const kanji = data.kanji;
     
     toggleTitle();
-    switchElement("menu", clues);
+    switchElement(onScreen, clues);
+    youAreClueGiver = true;
     
     const kanjiName = document.getElementById("kanjiName");
     const furigana = document.getElementById("furigana");
@@ -77,9 +80,10 @@ socket.on("someone_was_selected", (data) => {
     const playerNickname = data.selectedPlayerNickname;
     clueGiver = playerNickname;
     
-    toggleTitle();
-
-    switchElement("menu", drawingZone);
+    if (!youAreClueGiver) {
+        toggleTitle();
+        switchElement(onScreen, drawingZone);
+    }
 
     const playerListDiv = document.getElementById("player-list");
     const paragraphs = playerListDiv.querySelectorAll("p");
@@ -102,12 +106,26 @@ socket.on("round_ended", (data) => {
     const kanji = data.selectedCharacter;
     const kanjiImage = data.characterImage;
     const someone_guessed = data.guessed;
-
+    youAreClueGiver = false; // Reset the flag of the clue giver on the client
+    
     console.log(kanji);
     console.log(kanjiImage);
     console.log("Someone guessed: " + someone_guessed);
     // TODO : Show the kanji (if the image is the way it is draw, its useful, otherwise we don't need it)
+    const roundEndedInfo = document.getElementById("roundEndedInfo");
 
+    if (someone_guessed) {
+        roundEndedInfo.innerHTML = `<b>Kanji guessed : ${kanji} !</b>`;
+    }
+    else {
+        // Time's up
+        roundEndedInfo.innerHTML = `<b>Time's up !</b>`;
+    }
+    // Clear the roundEndedInfo after 3s
+    setTimeout(() => {
+        const roundEndedInfo = document.getElementById("roundEndedInfo");
+        roundEndedInfo.innerHTML = "";
+    }, 3000);
 });
 
 // Get the information of the current round and the total number of rounds
@@ -117,7 +135,7 @@ socket.on("round_started", (data) => {
     const totalRound = data.total_rounds;
     
     const roundsInfo = document.getElementById("rounds");
-    roundsInfo.innerText = `Rounds : ${currentRound}/${totalRound}`
+    roundsInfo.innerText = `Rounds : ${currentRound}/${totalRound}`;
 });
 
 // Update the players scores
@@ -134,11 +152,11 @@ socket.on("update_scores", (data) => {
             name = "<b>" + players[i].name + " (Clue Giver)</b><br>";
         }
         else {
-            name = players[i].name + "\n";
+            name = players[i].name + "<br>";
         }
         const score = players[i].score;
         scoresDict[players[i].name] = score;
-        p.innerText = `${name}${score}`;
+        p.innerHTML = `${name}${score}`;
         i = i + 1;
     });
 });
@@ -151,14 +169,28 @@ socket.on("game_over", (data) => {
 
     console.log(name);
     console.log(score);
-    // TODO : For each player, update its score
+    // Show a game over screen
     
+    const roundEndedInfo = document.getElementById("roundEndedInfo");
+    roundEndedInfo.innerHTML = `<b>Game Over! <br> Winner is ${name} with ${score} points.</b>`
+
+    // Clear the in-game information and return to menu after 5s
+    setTimeout(() => {
+        switchElement(onScreen, menu);
+        const roundsInfo = document.getElementById("rounds");
+        roundsInfo.innerText = "";
+        const roundEndedInfo = document.getElementById("roundEndedInfo");
+        roundEndedInfo.innerHTML = "";
+        // Reset the scores
+        Object.entries(scoresDict).forEach(([key, _]) => {
+            scoresDict[key] = 0;
+        });
+    }, 5000);
 });
 
 // TODO...
 // Treat the following messages:
 // 'round_ended'
-// 'update_scores'
 // 'game_over'
 
 // Send the following:
