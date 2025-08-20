@@ -139,6 +139,7 @@ async def join_game(gamecode):
             # Try to add player
             if game.add_player(uuid_, nickname):
                 logger.info(f"User with nickname {nickname} and uuid {uuid_} connected to game {gamecode}")
+
                 return resp
             else:
                 # Lobby full
@@ -222,6 +223,10 @@ async def connect_info(sid, data):
         return
 
     game = game_dict[gamecode]
+
+    # If the player is the admin, give it this information
+    if (game.admin == player_uuid):
+        await sio.emit("you_are_game_admin", {}, to=sid)
 
     # Save socket id
     player = game.connected_players.get(player_uuid)
@@ -471,5 +476,5 @@ async def get_characters(sid, data):
 
 if __name__ == "__main__":
     init()
-    uvicorn.run(tapp, host="127.0.0.1", port=3000)
+    uvicorn.run(tapp, host="0.0.0.0", port=3000)
     

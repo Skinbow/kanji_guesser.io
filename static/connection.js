@@ -25,6 +25,12 @@ function getCookie(name) {
 
 const nicknames = [];
 
+// Show the start button if you are the game admin
+socket.on("you_are_game_admin", (data) => {
+    const startButton = document.getElementById("startButton");
+    startButton.style.display = "block";
+});
+
 // Load the players nicknames on the bottom grid
 socket.on("player_list", (data) => {
     nicknames.length = 0; // reset
