@@ -219,3 +219,40 @@ html, body {
     right: 0;
     top: 0;
 }
+
+/* For phone*/
+@media (max-width: 1200px) {
+    .circle {
+        width: min(80vw, 35vh);
+    }
+
+    .top-gif-wrapper {
+        top: 60pt;
+    }
+    
+    .top-gif-wrapper img {
+        width: 90vw;
+    }
+
+    /*Forbid scroll and set the maximum width size of every elements to the viewport width*/
+    html, body {
+        overflow-x: hidden;
+        width: 100vw;
+        height: 100vh;
+        margin: 0;
+        padding: 0;
+    }
+    * {
+        box-sizing: border-box;
+        max-width: 100vw;
+    }
+
+    #player-list {
+        position: fixed;
+        grid-auto-flow: column;
+        grid-auto-columns: 150px;
+        overflow-x: auto;
+        overflow-y: hidden;
+        white-space: nowrap;
+    }
+}
