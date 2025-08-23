@@ -40,22 +40,11 @@ from random import randint
 # print("Done.")
 #------------------------------------------------------------
 
-
 SAVE_DIR = Path("drawings")
 SAVE_DIR.mkdir(exist_ok=True)
 
-# TODO: add the complete list
-characterList = ['金', '木', '水', '火', '土']
-character_to_image_name = {
-    '金': 'gold.png',
-    '木': 'wood.png',
-    '水': 'water.png',
-    '火': 'fire.png',
-    '土': 'earth.png'
-}
-
 def get_random_kanji():
-    with open('static/kanjis.csv', newline='', encoding='utf-8-sig') as csvfile:
+    with open('static/kanji_data.csv', newline='', encoding='utf-8-sig') as csvfile:
         reader = csv.DictReader(csvfile)
         kanjis = list(reader)
     return random.choice(kanjis)
