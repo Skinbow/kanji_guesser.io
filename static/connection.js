@@ -68,16 +68,9 @@ socket.on("you_are_clue_giver", (data) => {
     const kanjiName = document.getElementById("kanjiName");
     const furigana = document.getElementById("furigana");
     const explanation = document.getElementById("explanation");
-    const construction = document.getElementById("construction");
-    const example = document.getElementById("example");
-
     kanjiName.innerHTML = "<b>Kanji : </b>" + kanji.Kanji;
     furigana.innerHTML = "<b>Furigana : </b>" + kanji.Furigana;
-    explanation.innerHTML = "<b>Explanation : </b>" + kanji.Explication;
-    construction.innerHTML = "<b>Construction : </b>" + kanji.Construction;
-    if (kanji.Exemples != null) {
-        example.innerHTML = "<b>Examples : </b>" + kanji.Exemples;
-    }
+    explanation.innerHTML = "<b>Explanation : </b>" + kanji.Meaning;
 });
 
 // Tell the client it is the guesser (should draw the kanji based on the clues)
@@ -108,7 +101,6 @@ socket.on("someone_was_selected", (data) => {
 // Show the right answer in this round
 socket.on("round_ended", (data) => {
     const kanji = data.selectedCharacter;
-    const kanjiImage = data.characterImage;
     const someone_guessed = data.guessed;
     youAreClueGiver = false; // Reset the flag of the clue giver on the client
     
