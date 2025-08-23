@@ -7,7 +7,7 @@ from PIL import Image
 import timm
 
 class EfficientNetEmbedding(torch.nn.Module):
-    def __init__(self, model_name='efficientnetv2_s', embedding_dim=128):
+    def __init__(self, model_name='tf_efficientnetv2_s', embedding_dim=128):
         super().__init__()
 
         # Load the model without the weights and without the last layer
@@ -31,34 +31,6 @@ class EfficientNetEmbedding(torch.nn.Module):
         x = self.backbone(x)
         x = F.normalize(self.embedding(x), p=2, dim=1)  # L2 Normalization
         return x
-
-def get_kanji_dataframe(df_path):
-    """
-    This function return the list of Kanji to be guessed based on those we learned
-    during this semester, cleaned of the kanas and ～ symbol.
-    """
-    df = pd.read_csv(df_path)
-    kana_string = "あアいイうウえエおオかカきキくクけケこコさサしシすスせセそソたタちチつツてテとトなナにニぬヌねネのノはハひヒふフへヘほホまマみミむムめメもモやヤゆユよヨらラりリるルれレろロわワをヲんンがガぎギぐグげゲごゴざザじジずズぜゼぞゾだダぢヂづヅでデどドばバびビぶブべベぼボぱパぴピぷプぺペぽポきゃキャきゅキュきょキョしゃシャしゅシュしょショちゃチャちゅチュちょチョにゃニャにゅニュにょニョひゃヒャひゅヒュひょヒョみゃミャみゅミュみょミョりゃリャりゅリュりょリョぎゃギャぎゅギュぎょギョじゃジャじゅジュじょジョびゃビャびゅビュびょビョぴゃピャぴゅピュぴょピョ"
-    for j in range(len(df["Kanji"])):
-        df.loc[j, "Kanji"] = "".join([i for i in df["Kanji"][j] if not(i in kana_string)])
-    
-
-    for j in range(len(df["Kanji"])):
-        if (len(df["Kanji"][j]) > 1):
-            for i in range(len(df["Kanji"][j])-1):
-                df.loc[len(df["Kanji"]), ["Kanji", "Furigana"]] = (df.loc[j, "Kanji"][i+1], df.loc[j, "Furigana"])
-            df.loc[j, "Kanji"] = df.loc[j, "Kanji"][0]
-
-    # Clean the ～ char
-    rows_to_drop = []
-    for j in range(len(df["Kanji"])):
-        if (df.loc[j, "Kanji"] == '～'):
-            rows_to_drop.append(j)
-            
-    df = df.drop(rows_to_drop)
-    df = df.reset_index(drop=True)
-
-    return df
 
 def load_model(model_path, device):
     """
