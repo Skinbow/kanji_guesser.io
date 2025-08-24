@@ -55,7 +55,7 @@ def init():
 
     # Transform for the drawings on the website and the references images
     transform = transforms.Compose([
-        transforms.Resize((128, 128)),
+        transforms.Resize((64, 64)),
         transforms.Grayscale(num_output_channels=1),
         transforms.ToTensor(),
         transforms.Lambda(lambda x: 1.0 - x),
