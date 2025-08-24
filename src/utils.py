@@ -44,7 +44,7 @@ SAVE_DIR = Path("drawings")
 SAVE_DIR.mkdir(exist_ok=True)
 
 def get_random_kanji():
-    with open('static/kanji_data.csv', newline='', encoding='utf-8-sig') as csvfile:
+    with open('static/kanji_marugoto.csv', newline='', encoding='utf-8-sig') as csvfile:
         reader = csv.DictReader(csvfile)
         kanjis = list(reader)
     return random.choice(kanjis)

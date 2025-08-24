@@ -47,13 +47,15 @@ def init():
     global device, model, transform, labels, reference_vectors
     logger.debug("Loading the model...")
     device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
-    model = EfficientNetEmbedding()
-    state_dict = torch.load("static/models/net_50.pth", map_location=device, weights_only=True)
-    model.load_state_dict(state_dict)
+    model = torch.load("static/models/Model_250.pth", map_location=device)
+    # Loading for the new model
+    # model = EfficientNetEmbedding()
+    # state_dict = torch.load("static/models/Model_250.pth", map_location=device, weights_only=True)
+    # model.load_state_dict(state_dict)
 
     # Transform for the drawings on the website and the references images
     transform = transforms.Compose([
-        transforms.Resize((64, 64)),
+        transforms.Resize((128, 128)),
         transforms.Grayscale(num_output_channels=1),
         transforms.ToTensor(),
         transforms.Lambda(lambda x: 1.0 - x),
