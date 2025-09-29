@@ -47,7 +47,7 @@ def init():
     global device, model, transform, labels, reference_vectors
     logger.debug("Loading the model...")
     device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
-    model = torch.load("static/models/Model_250.pth", map_location=device)
+    model = torch.load("static/models/Model_250.pth", map_location=device, weights_only=False)
     # Loading for the new model
     # model = EfficientNetEmbedding()
     # state_dict = torch.load("static/models/Model_250.pth", map_location=device, weights_only=True)
@@ -477,5 +477,5 @@ async def get_characters(sid, data):
 
 if __name__ == "__main__":
     init()
-    uvicorn.run(tapp, host="0.0.0.0", port=3000)
+    uvicorn.run(tapp, host="127.0.0.1", port=3000)
     
