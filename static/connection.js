@@ -160,12 +160,20 @@ socket.on("update_scores", (data) => {
 
 // Update the players scores
 socket.on("game_over", (data) => {
-    const name = data.name;
-    const score = data.score;
+    let maxScore = 0;
+    let winner = "";
+    for (let i = 0; i < data.length; i++) {
+        const name = data[i].name;
+        const score = data[i].score;
+        if (score > maxScore) {
+            winner = name;
+            maxScore = score;
+        }
+    }
     
     // Game over's information about the winner.
     const roundEndedInfo = document.getElementById("roundEndedInfo");
-    roundEndedInfo.innerHTML = `<b>Game Over! <br> Winner is ${name} with ${score} points.</b>`
+    roundEndedInfo.innerHTML = `<b>Game Over! <br> Winner is ${winner} with ${maxScore} points.</b>`
 
     // Clear the in-game information and return to menu after 5s
     setTimeout(() => {
