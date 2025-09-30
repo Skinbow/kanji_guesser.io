@@ -4,7 +4,7 @@ const titleGif = document.getElementById("title-gif");
 titleGif.src = titleGif.src + "?" + new Date().getTime();
 // After X seconds change the gif to the shaking title
 setTimeout(() => {
-    titleGif.src = "/static/resources/KanjiGuessr2.gif";
+    titleGif.src = "/static/resources/KanjiGuessr2.gif" + "?" + new Date().getTime();;
 }, 2500); 
 
 // Raining effect with kanjis + hiragana + katakana
@@ -40,22 +40,24 @@ for (let i = 0; i < columns; i++) {
 
 // Function to draw the raining effect
 function draw() {
-    ctx.clearRect(0, 0, canvas.width, canvas.height); // Clear everything
-
     ctx.fillStyle = "rgba(206, 35, 19, 0.2)"; // Font color (dark red of the palette)
     ctx.font = fontSize + "px monospace";
 
     // At each call, update pos/reset randomly certains positions, chars and speeds
     for (let i = 0; i < yPos.length; i++) {
         const text = charAtPos[i];
-        ctx.fillText(text, i * fontSize, yPos[i] * fontSize);
-
-        if (yPos[i] * fontSize > canvas.height && Math.random() > 0.975) {
-            yPos[i] = 0;
-            charAtPos[i] = characters.charAt(Math.floor(Math.random() * characters.length));
-            speed[i] = Math.random() * (0.15 - 0.1) + 0.1;
+        if (yPos[i] * fontSize > canvas.height + fontSize) {
+            if (Math.random() > 0.975) {
+                yPos[i] = 0;
+                charAtPos[i] = characters.charAt(Math.floor(Math.random() * characters.length));
+                speed[i] = Math.random() * (0.15 - 0.1) + 0.1;
+            }
         }
-        yPos[i] += speed[i];
+        else {
+            ctx.clearRect(i * fontSize, (yPos[i] - 1) * fontSize - 1, fontSize, fontSize + 1);
+            ctx.fillText(text, i * fontSize, yPos[i] * fontSize);
+            yPos[i] += speed[i];
+        }
     }
     requestAnimationFrame(draw);
 }
