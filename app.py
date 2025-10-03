@@ -118,6 +118,9 @@ async def join_game(gamecode):
             return resp
         else:
             return render_template("error_page.html", error_msg="Lobby is full!")
+    # Prevent a user from connecting to the same game multiple times
+    elif "uuid" in request.cookies and request.cookies["uuid"] in game.connected_players:
+        return render_template("error_page.html", error_msg="You cannot connect to the same game multiple times")
     else:
         nickname = None
         if "nickname" in request.args:
