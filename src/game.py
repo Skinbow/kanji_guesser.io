@@ -54,7 +54,7 @@ class Game:
         # Select new admin if admin leaves
         if self.admin == player_uuid:
             if len(self.connected_players) != 0:
-                self.admin = self.connected_players.keys()[0]
+                self.admin = list(self.connected_players.keys())[0]
         if player_uuid in self.player_scores:
             self.player_scores.pop(player_uuid)
         return True

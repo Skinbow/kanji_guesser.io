@@ -4,6 +4,7 @@ const gamecodeRe = new RegExp("/game/([0-9a-fA-F]{6})/.*");
 const gamecode = window.location.pathname.match(gamecodeRe)[1];
 let clueGiver = "";
 let youAreClueGiver = false;
+let youAreGameAdmin = false;
 const scoresDict = {};
 const menu = document.getElementById("menu"); // Store the menu to show it back on screen
 
@@ -25,16 +26,29 @@ function getCookie(name) {
 
 const nicknames = [];
 
+function updateStartButton() {
+    const startButton = document.getElementById("startButton");
+    if (startButton === null)
+        return;
+    if (nicknames.length > 1 && youAreGameAdmin) {
+        startButton.style.display = "block";
+    } else {
+        startButton.style.display = "none";
+    }
+}
+
 // Show the start button if you are the game admin
 socket.on("you_are_game_admin", (data) => {
-    const startButton = document.getElementById("startButton");
-    startButton.style.display = "block";
+    youAreGameAdmin = true;
+    updateStartButton();
 });
 
 // Load the players nicknames on the bottom grid
 socket.on("player_list", (data) => {
     nicknames.length = 0; // reset
     nicknames.push(...data.player_nicknames);
+
+    updateStartButton();
 
     const playerListDiv = document.getElementById("player-list");
     playerListDiv.innerHTML = ""; // reset

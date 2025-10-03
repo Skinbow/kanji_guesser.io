@@ -282,10 +282,16 @@ async def disconnect(sid, reason):
     player = game.connected_players.get(player_uuid)
     nickname = player.nickname
 
+    change_admin = (game.admin == player_uuid)
+
     if game.in_progress:
         game.disconnect_player(player_uuid)
     else:
         game.remove_player(player_uuid)
+
+    # Notify admin
+    if change_admin:
+        await sio.emit("you_are_game_admin", {}, to=game.connected_players.get(game.admin).socketid) 
 
     # Notify other players
     await sio.emit("player_list", {
@@ -293,7 +299,7 @@ async def disconnect(sid, reason):
         'player_ids': [p.publicid for p in game.connected_players.values()]
     }, to=str(gamecode))
 
-    logger.info(f"User with nickname {nickname} and uuid {player_uuid} disconnected from game {gamecode}")
+    logger.debug(f"User with nickname {nickname} and uuid {player_uuid} disconnected from game {gamecode}")
     
     # Remove game after 10s of inactivity
     if game.is_empty():
@@ -326,7 +332,8 @@ async def start_game(sid):
     
     game = game_dict[gamecode]
     
-    if game.admin == player_uuid:
+    # Accept game start message only from admin if there are enough people
+    if game.admin == player_uuid and len(game.connected_players) > 1:
         logger.info(f"Game with code {gamecode} started!")
 
         game.start_game(NUMBER_OF_ROUNDS)
